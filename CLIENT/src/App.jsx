@@ -1,122 +1,83 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useEffect } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import { useAppDispatch, useAppSelector } from "./hooks/reduxHooks";
+import { GetProfile } from "./features/auth/authThunk";
+import { GetCart as fetchCart } from "./features/cart/cartThunk";
+import { GetWishlist as fetchWishlist } from "./features/wishlist/wishlistThunk";
+import { Account } from "./pages/Account";
+import { AdminDashboard } from "./pages/AdminDashboard";
+import { AuthPage } from "./pages/AuthPage";
+import { Cart } from "./pages/Cart";
+import { Checkout } from "./pages/Checkout";
+import { ForgotPassword } from "./pages/ForgotPassword";
+import { Home } from "./pages/Home";
+import { NotFound } from "./pages/NotFound";
+import { OrderDetails } from "./pages/OrderDetails";
+import { Orders } from "./pages/Orders";
+import { PaymentStatus } from "./pages/PaymentStatus";
+import { ProductDetails } from "./pages/ProductDetails";
+import { Products } from "./pages/Products";
+import { ResetPassword } from "./pages/ResetPassword";
+import { Wishlist } from "./pages/Wishlist";
 
-function App() {
-  const [count, setCount] = useState(0)
+function Shell({ children }) {
+  const location = useLocation();
+  const user = useAppSelector((state) => state.auth.user);
+  const isPrivileged = ["admin", "product manager", "inventory staff", "order manager"].includes(user?.role);
+
+  if (isPrivileged && !location.pathname.startsWith("/admin")) {
+    return <Navigate to="/admin" replace />;
+  }
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+      {!location.pathname.startsWith("/admin") && <Navbar />}
+      {children}
+      {!location.pathname.startsWith("/admin") && <Footer />}
     </>
-  )
+  );
 }
 
-export default App
+export default function App() {
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    dispatch(GetProfile()).then((result) => {
+      if (GetProfile.fulfilled.match(result)) {
+        dispatch(fetchCart());
+        dispatch(fetchWishlist());
+      }
+    });
+  }, [dispatch]);
+
+  return (
+    <Routes>
+      <Route path="/" element={<Shell><Home /></Shell>} />
+      <Route path="/products" element={<Shell><Products /></Shell>} />
+      <Route path="/mens" element={<Shell><Products gender="men" /></Shell>} />
+      <Route path="/womens" element={<Shell><Products gender="women" /></Shell>} />
+      <Route path="/kids" element={<Shell><Products gender="kids" /></Shell>} />
+      <Route path="/sale" element={<Shell><Products collection="sale" /></Shell>} />
+      <Route path="/product/:slug" element={<Shell><ProductDetails /></Shell>} />
+      <Route path="/auth" element={<AuthPage />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
+      <Route element={<ProtectedRoute />}>
+        <Route path="/account" element={<Shell><Account /></Shell>} />
+        <Route path="/wishlist" element={<Shell><Wishlist /></Shell>} />
+        <Route path="/cart" element={<Shell><Cart /></Shell>} />
+        <Route path="/checkout" element={<Shell><Checkout /></Shell>} />
+        <Route path="/orders" element={<Shell><Orders /></Shell>} />
+        <Route path="/orders/:id" element={<Shell><OrderDetails /></Shell>} />
+        <Route path="/payment/:status" element={<Shell><PaymentStatus /></Shell>} />
+      </Route>
+      <Route element={<ProtectedRoute roles={["admin", "product manager", "inventory staff", "order manager"]} />}>
+        <Route path="/admin/*" element={<Shell><AdminDashboard /></Shell>} />
+      </Route>
+      <Route path="*" element={<Shell><NotFound /></Shell>} />
+    </Routes>
+  );
+}
