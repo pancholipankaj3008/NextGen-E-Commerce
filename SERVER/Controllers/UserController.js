@@ -11,7 +11,7 @@ async function SignUp(req, res) {
 
         let existUser = await User.findOne({ email });
 
-        if (existUser) return res.json({ success: false, message: "User already exists" });
+        if (existUser) return res.status(409).json({ success: false, message: "User already exists" });
 
         bcrypt.hash(password, saltRounds, async function (err, hash) {
             if (err) return res.json({ success: false, message: err.message });
@@ -37,7 +37,7 @@ async function Login(req, res) {
 
         let existUser = await User.findOne({ email });
 
-        if (!existUser) return res.json({ success: false, message: "User not found" });
+        if (!existUser) return res.status(404).json({ success: false, message: "User not found" });
 
         if (existUser.isBlocked) {
             return res.json({
@@ -49,7 +49,7 @@ async function Login(req, res) {
         bcrypt.compare(password, existUser.password, function (err, result) {
             if (err) return res.json({ success: false, message: err.message });
 
-            if (!result) return res.json({ success: false, message: "Invalid Password" });
+            if (!result) return res.status(401).json({ success: false, message: "Invalid Password" });
 
             let accessToken = jwt.sign({
                 id: existUser._id,
@@ -61,18 +61,32 @@ async function Login(req, res) {
                 role: existUser.role
             }, process.env.REFRESH, { expiresIn: '7d' });
 
-            res.cookie("refreshToken", refreshToken, {
+            const cookieOptions = {
                 httpOnly: true,
-                secure: false,
-                maxAge: 7 * 24 * 60 * 60 * 1000
-            })
-            res.cookie("accessToken", accessToken, {
-                httpOnly: true,
-                secure: false,
-                maxAge: 15 * 60 * 1000
-            })
+                secure: false, // localhost
+                sameSite: "lax",
+            };
 
-            res.json({ success: true, message: "Login Successfully" });
+            res.cookie("accessToken", accessToken, {
+                ...cookieOptions,
+                maxAge: 15 * 60 * 1000,
+            });
+
+            res.cookie("refreshToken", refreshToken, {
+                ...cookieOptions,
+                maxAge: 7 * 24 * 60 * 60 * 1000,
+            });
+
+            res.json({
+    success: true,
+    message: "Login Successfully",
+    user: {
+        _id: existUser._id,
+        name: existUser.name,
+        email: existUser.email,
+        role: existUser.role
+    }
+});
 
         });
     } catch (error) {
@@ -85,8 +99,14 @@ async function Logout(req, res) {
 
     try {
 
-        res.clearCookie("refreshToken");
-        res.clearCookie("accessToken");
+        const cookieOptions = {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+};
+
+res.clearCookie("accessToken", cookieOptions);
+res.clearCookie("refreshToken", cookieOptions);
 
         res.json({ success: true, message: "Logout Successfully" });
     } catch (error) {
@@ -112,92 +132,335 @@ async function GetProfile(req, res) {
 async function UpdateProfile(req, res) {
     try {
 
-        await User.findByIdAndUpdate(req.id, req.body);
+        let update = { ...req.body };
 
-        res.json({ success: true, message: "Profile Updated" });
+        delete update.password;
+        delete update.avatar;
+        delete update.role;
+        delete update.email;
+        if (update.dob === "") delete update.dob;
+
+        let user = await User.findByIdAndUpdate(req.id, update, { new: true }).select("-password");
+
+        res.json({ success: true, message: "Profile Updated", user });
 
     } catch (error) {
         res.json({ success: false, message: error.message });
     }
 }
 
-async function AddAddress(req, res) {
+async function ChangePassword(req, res) {
     try {
+        let { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ success: false, message: "Current and new password are required" });
+        }
+
+        if (String(newPassword).length < 6) {
+            return res.status(400).json({ success: false, message: "New password must be at least 6 characters" });
+        }
+
         let user = await User.findById(req.id);
 
-        if (!user) return res.json({ success: false, message: "User not found" });
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        let isMatch = await bcrypt.compare(currentPassword, user.password);
+
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: "Current password is incorrect" });
+        }
+
+        user.password = await bcrypt.hash(newPassword, saltRounds);
+
+        await user.save();
+
+        res.json({ success: true, message: "Password changed successfully" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+}
+
+async function AddAddress(req, res) {
+
+    try {
+
+        let user = await User.findById(req.id);
+
+        if (!user) {
+
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+
+        }
 
         user.addresses.push(req.body);
 
         await user.save();
 
-        res.json({ success: true, message: "address Added Successfully" });
+        let address = user.addresses[user.addresses.length - 1];
+
+        res.status(201).json({
+            success: true,
+            message: "Address Added Successfully",
+            address
+        });
+
     } catch (error) {
-        res.json({ success: false, message: error.message });
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+
+}
+
+async function UpdateAddress(req, res) {
+
+    try {
+
+        let { addressId } = req.params;
+
+        let user = await User.findById(req.id);
+
+        if (!user) {
+
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+
+        }
+
+        let address = user.addresses.id(addressId);
+
+        if (!address) {
+
+            return res.status(404).json({
+                success: false,
+                message: "Address not found"
+            });
+
+        }
+
+        Object.assign(address, req.body);
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: "Address Updated Successfully",
+            address
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
     }
 
 }
 
 
 async function RemoveAddress(req, res) {
+
     try {
+
         let { addressId } = req.params;
 
         let user = await User.findById(req.id);
+
+        if (!user) {
+
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+
+        }
+
+        let address = user.addresses.id(addressId);
+
+        if (!address) {
+
+            return res.status(404).json({
+                success: false,
+                message: "Address not found"
+            });
+
+        }
 
         user.addresses.pull(addressId);
 
         await user.save();
 
-        res.json({ success: true, message: "Address Deleted Successfully" });
+        res.json({
+            success: true,
+            message: "Address Deleted Successfully",
+            addressId
+        });
 
     } catch (error) {
-        res.json({ success: false, message: error.message });
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
 
     }
+
 }
 
 
 async function GetWishlist(req, res) {
+
     try {
-        let user = await User.findById(req.id);
 
-        if (!user.wishlist) return res.json({ success: false, message: "Wishlist is empty" });
+        let user = await User.findById(req.id)
+            .populate("wishlist");
 
-        res.json({ success: true, wishlist: user.wishlist });
+        if (!user) {
+
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+
+        }
+
+        res.json({
+            success: true,
+            totalItems: user.wishlist.length,
+            wishlist: user.wishlist
+        });
+
     } catch (error) {
-        res.json({ success: false, message: error.message });
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
     }
+
 }
 
 async function AddToWishlist(req, res) {
+
     try {
+
         let { productId } = req.params;
+
         let user = await User.findById(req.id);
+
+        if (!user) {
+
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+
+        }
+
+        let alreadyExists = user.wishlist.some(
+            (id) => id.toString() === productId
+        );
+
+        if (alreadyExists) {
+
+            return res.status(400).json({
+                success: false,
+                message: "Product already in wishlist"
+            });
+
+        }
 
         user.wishlist.push(productId);
 
         await user.save();
 
-        res.json({ success: true, message: "Added to wishlist" });
+        let updatedUser = await User.findById(req.id)
+            .populate("wishlist");
+
+        let addedProduct = updatedUser.wishlist.find(
+            (product) => product._id.toString() === productId
+        );
+
+        res.json({
+            success: true,
+            message: "Added to wishlist",
+            product: addedProduct
+        });
+
     } catch (error) {
-        res.json({ success: false, message: error.message });
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
     }
-};
+
+}
 
 async function RemoveWishlist(req, res) {
+
     try {
+
         let { productId } = req.params;
+
         let user = await User.findById(req.id);
+
+        if (!user) {
+
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+
+        }
+
+        let exists = user.wishlist.some(
+            (id) => id.toString() === productId
+        );
+
+        if (!exists) {
+
+            return res.status(404).json({
+                success: false,
+                message: "Product not found in wishlist"
+            });
+
+        }
 
         user.wishlist.pull(productId);
 
         await user.save();
 
-        res.json({ success: true, message: "Removed from wishlist" });
+        res.json({
+            success: true,
+            message: "Removed from wishlist",
+            productId
+        });
+
     } catch (error) {
-        res.json({ success: false, message: error.message });
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
     }
+
 }
 
 
@@ -244,6 +507,14 @@ async function GetAllUsers(req, res) {
 async function DeleteUser(req, res) {
     try {
         let { id } = req.params;
+        let user = await User.findById(id);
+
+        if (!user) return res.json({ success: false, message: "User not found" });
+
+        if (user.role === "admin") {
+            return res.json({ success: false, message: "Admin user cannot be deleted" });
+        }
+
         await User.findByIdAndDelete(id);
 
         res.json({ success: true, message: "User Deleted Successfully" });
@@ -266,6 +537,13 @@ async function UpdateUserByAdmin(req, res) {
             return res.json({
                 success: false,
                 message: "User not found"
+            });
+        }
+
+        if (user.role === "admin") {
+            return res.json({
+                success: false,
+                message: "Admin user cannot be blocked"
             });
         }
 
@@ -438,4 +716,4 @@ async function UserAnalytics(req, res) {
 
 
 
-module.exports = { SignUp, Login, Logout, GetProfile, UpdateProfile, AddAddress, RemoveAddress, AddToWishlist, RemoveWishlist, GetAllUsers, GetWishlist, CreateByAdmin, GetAllUsers, DeleteUser, UpdateUserByAdmin, BlockUser, UnblockUser, UserAnalytics };
+module.exports = { SignUp, Login, Logout, GetProfile, UpdateProfile, ChangePassword, AddAddress, UpdateAddress, RemoveAddress, AddToWishlist, RemoveWishlist, GetAllUsers, GetWishlist, CreateByAdmin, GetAllUsers, DeleteUser, UpdateUserByAdmin, BlockUser, UnblockUser, UserAnalytics };

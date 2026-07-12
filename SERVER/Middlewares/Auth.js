@@ -1,19 +1,25 @@
 let jwt = require("jsonwebtoken");
 
-function Auth(...roles){
+function Auth(...roles) {
 
-    return (req, res, next)=>{
+    return (req, res, next) => {
         try {
-            
 
             let token = req.cookies.accessToken;
 
-            if(!token) return res.json({success: false, message: "Unauthorized User"});
+            if (!token)
+                return res.status(401).json({
+                    success: false,
+                    message: "Unauthorized User"
+                });
 
             let decoded = jwt.verify(token, process.env.ACCESS);
 
-            if(!roles.includes(decoded.role)){
-                return res.json({success: false, message: "Unauthorized User"});
+            if (!roles.includes(decoded.role)) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Unauthorized User"
+                });
             }
 
             req.id = decoded.id;
@@ -21,39 +27,64 @@ function Auth(...roles){
 
             next();
 
-
         } catch (error) {
-            try {
-                if(error.message === "jwt expired"){
-                    let refreshToken = req.cookies.REFRESH;
 
-                    if(!refreshToken) return res.json({success: false, message:"Refresh Token not found"})
+            if (error.name !== "TokenExpiredError") {
+                return res.status(401).json({
+                    success: false,
+                    message: "Unauthorized User"
+                });
+            }
+
+            try {
+
+                const refreshToken = req.cookies.refreshToken;
+
+                if (!refreshToken) {
+                    return res.status(401).json({
+                        success: false,
+                        message: "Please login again"
+                    });
                 }
 
                 let decoded = jwt.verify(refreshToken, process.env.REFRESH);
 
-                if(!roles.includes(decoded.role)){
-                    return res.json({success: false, message: "Unauthorized User"})
+                if (!roles.includes(decoded.role)) {
+                    return res.status(401).json({
+                        success: false,
+                        message: "Unauthorized User"
+                    });
                 }
 
-                let newAccessToken = jwt.sign({id: decoded.id, role: decoded.role}, process.env.ACCESS, {expiresIn: "15m"});
+                let newAccessToken = jwt.sign(
+                    {
+                        id: decoded.id,
+                        role: decoded.role
+                    },
+                    process.env.ACCESS,
+                    { expiresIn: "15m" }
+                );
 
-                res.cookie("accessToken", newAccessToken,{
-                        httpOnly: true,
-                        secure: false,
-                        maxAge: 15 * 60 * 1000
-                    });
+                res.cookie("accessToken", newAccessToken, {
+                    httpOnly: true,
+                    secure: false,      // localhost
+                    sameSite: "lax",
+                    maxAge: 15 * 60 * 1000
+                });
 
-                    req.id = decoded.id;
-                    req.role = decoded.role;
+                req.id = decoded.id;
+                req.role = decoded.role;
 
-                    next();
+                next();
+
             } catch (error2) {
-                return res.json({success: false, message:error2.message});
+                return res.status(401).json({
+                    success: false,
+                    message: "Please login again"
+                });
             }
         }
     }
 }
 
-
-module.exports = {Auth};
+module.exports = { Auth };

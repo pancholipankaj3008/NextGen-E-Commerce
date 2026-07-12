@@ -11,9 +11,11 @@ const {
     // PROFILE
     GetProfile,
     UpdateProfile,
+    ChangePassword,
 
     // ADDRESS
     AddAddress,
+    UpdateAddress,
     RemoveAddress,
 
     // WISHLIST
@@ -34,7 +36,7 @@ const {
 
 const { Auth } = require("../Middlewares/Auth");
 
-let UserRouter = express.Router();
+const UserRouter = express.Router();
 
 // AUTH ROUTES
 UserRouter.post("/signup", SignUp);
@@ -47,10 +49,12 @@ UserRouter.post("/logout", Auth("user", "admin", "product manager", "order manag
 // PROFILE ROUTES
 UserRouter.get("/profile", Auth("user", "admin", "product manager", "order manager", "inventory staff"), GetProfile);
 UserRouter.put("/update-profile", Auth("user", "admin", "product manager", "order manager", "inventory staff"), UpdateProfile);
+UserRouter.put("/change-password", Auth("user", "admin", "product manager", "order manager", "inventory staff"), ChangePassword);
 
 
 // ADDRESS ROUTES
 UserRouter.post("/add-address", Auth("user", "admin"), AddAddress);
+UserRouter.put("/update-address/:addressId", Auth("user", "admin"), UpdateAddress);
 UserRouter.delete("/remove-address/:addressId", Auth("user", "admin"),RemoveAddress);
 
 

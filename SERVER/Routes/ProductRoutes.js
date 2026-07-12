@@ -21,13 +21,13 @@ const ProductRouter = express.Router();
 
 
 
-ProductRouter.post("/add-product", Auth("admin", "product manager"), upload.array("images", 10), AddProduct);
+ProductRouter.post("/add-product", Auth("admin", "product manager"), upload.any(), AddProduct);
 
 ProductRouter.get("/all-products", GetAllProducts);
 
 ProductRouter.get("/single-product/:id", GetSingleProduct);
 
-ProductRouter.put("/update-product/:id", Auth("admin", "product manager"), upload.array("images", 10), UpdateProduct);
+ProductRouter.put("/update-product/:id", Auth("admin", "product manager"), upload.any(), UpdateProduct);
 
 ProductRouter.delete("/delete-product/:id", Auth("admin", "product manager"), DeleteProduct);
 
