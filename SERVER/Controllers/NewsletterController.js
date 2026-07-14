@@ -69,4 +69,16 @@ async function DeleteSubscriber(req, res) {
     }
 }
 
-module.exports = { SubscribeNewsletter, GetAllSubscribers, DeleteSubscriber };
+async function UnsubscribeNewsletter(req, res) {
+    try {
+        const email = String(req.body.email || "").trim().toLowerCase();
+        if (!email) return res.status(400).json({ success: false, message: "Email is required" });
+        const subscriber = await Newsletter.findOneAndDelete({ email });
+        if (!subscriber) return res.status(404).json({ success: false, message: "Email is not subscribed" });
+        return res.json({ success: true, message: "Unsubscribed successfully" });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+}
+
+module.exports = { SubscribeNewsletter, UnsubscribeNewsletter, GetAllSubscribers, DeleteSubscriber };

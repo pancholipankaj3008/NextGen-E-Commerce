@@ -1,5 +1,6 @@
 import { Heart, ShoppingBag, Trash2 } from "lucide-react";
 import { useEffect } from "react";
+import "../index.css"
 import { Link } from "react-router-dom";
 
 import EmptyState from "../components/EmptyState";

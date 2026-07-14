@@ -54,7 +54,7 @@ async function Login(req, res) {
             let accessToken = jwt.sign({
                 id: existUser._id,
                 role: existUser.role
-            }, process.env.ACCESS, { expiresIn: '15m' });
+            }, process.env.ACCESS, { expiresIn: '30m' });
 
             let refreshToken = jwt.sign({
                 id: existUser._id,
@@ -63,13 +63,13 @@ async function Login(req, res) {
 
             const cookieOptions = {
                 httpOnly: true,
-                secure: false, // localhost
-                sameSite: "lax",
+                secure: process.env.NODE_ENV === "production",
+                sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
             };
 
             res.cookie("accessToken", accessToken, {
                 ...cookieOptions,
-                maxAge: 15 * 60 * 1000,
+                maxAge: 30 * 60 * 1000,
             });
 
             res.cookie("refreshToken", refreshToken, {
@@ -101,8 +101,8 @@ async function Logout(req, res) {
 
         const cookieOptions = {
     httpOnly: true,
-    secure: false,
-    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
 };
 
 res.clearCookie("accessToken", cookieOptions);
@@ -198,16 +198,24 @@ async function AddAddress(req, res) {
 
         }
 
-        user.addresses.push(req.body);
+        const address = { ...req.body };
+        address.fullName = address.fullName || address.fullname || user.name || "";
+        address.fullname = address.fullName;
+        address.houseNo = address.houseNo || address.house || "";
+        address.house = address.houseNo;
+        const required = ["fullName", "phone", "pincode", "city", "state", "houseNo"];
+        const missing = required.find((field) => !String(address[field] || "").trim());
+        if (missing) return res.status(400).json({ success: false, message: `${missing} is required` });
+        user.addresses.push(address);
 
         await user.save();
 
-        let address = user.addresses[user.addresses.length - 1];
+        let savedAddress = user.addresses[user.addresses.length - 1];
 
         res.status(201).json({
             success: true,
             message: "Address Added Successfully",
-            address
+            address: savedAddress
         });
 
     } catch (error) {

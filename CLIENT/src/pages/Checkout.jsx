@@ -1,7 +1,9 @@
 import {
+  BadgePercent,
   CreditCard,
   MapPin,
   PackageCheck,
+  X,
 } from "lucide-react";
 
 import {
@@ -31,6 +33,15 @@ import {
 } from "../features/auth/authThunk";
 
 import {
+  AddAddress,
+} from "../features/address/addressThunk";
+
+import {
+  ApplyCoupon,
+  GetAllCoupons,
+} from "../features/coupon/couponThunk";
+
+import {
   RemoveAppliedCoupon,
 } from "../features/coupon/couponSlice";
 
@@ -41,6 +52,7 @@ import {
 
 
 const emptyAddress = {
+  type: "Home",
   fullName: "",
   phone: "",
   pincode: "",
@@ -48,6 +60,7 @@ const emptyAddress = {
   state: "",
   area: "",
   houseNo: "",
+  landmark: "",
 };
 
 
@@ -113,6 +126,50 @@ function getItemImage(
 }
 
 
+// Best-effort, field-name-agnostic summary of a coupon so this still
+// renders sensibly whatever shape the backend coupon documents use.
+function describeCoupon(couponItem) {
+  const type =
+    couponItem.discountType ||
+    couponItem.type ||
+    "";
+
+  const value =
+    couponItem.discountValue ??
+    couponItem.discountPercent ??
+    couponItem.percentage ??
+    couponItem.amount ??
+    couponItem.discountAmount ??
+    null;
+
+  let headline = "Special offer";
+
+  if (value != null) {
+    if (
+      normalize(type).includes("percent") ||
+      couponItem.discountPercent != null ||
+      couponItem.percentage != null
+    ) {
+      headline = `${value}% OFF`;
+    } else {
+      headline = `${money(value)} OFF`;
+    }
+  }
+
+  const minOrder =
+    couponItem.minOrderAmount ??
+    couponItem.minOrderValue ??
+    couponItem.minPurchase ??
+    null;
+
+  const sub = minOrder
+    ? `On orders above ${money(minOrder)}`
+    : couponItem.description || "Tap to apply";
+
+  return { headline, sub };
+}
+
+
 export function Checkout() {
   const [step, setStep] =
     useState(0);
@@ -136,6 +193,12 @@ export function Checkout() {
   ] = useState(emptyAddress);
 
 
+  const [couponCode, setCouponCode] =
+    useState("");
+
+  const [addressError, setAddressError] = useState("");
+
+
   const dispatch =
     useAppDispatch();
 
@@ -146,6 +209,7 @@ export function Checkout() {
 
   useEffect(() => {
     dispatch(GetCart());
+    dispatch(GetAllCoupons());
   }, [dispatch]);
 
 
@@ -154,6 +218,10 @@ export function Checkout() {
       (state) =>
         state.auth?.user || null
     );
+
+  const savedAddresses = useAppSelector(
+    (state) => state.address?.addresses || []
+  );
 
 
   const cartState =
@@ -185,6 +253,13 @@ export function Checkout() {
     );
 
 
+  const availableCoupons = Array.isArray(
+    couponState.coupons
+  )
+    ? couponState.coupons
+    : [];
+
+
   const appliedCoupon =
     couponState.appliedCoupon || null;
 
@@ -201,6 +276,14 @@ export function Checkout() {
     );
 
 
+  const applyLoading =
+    Boolean(couponState.applyLoading);
+
+
+  const couponError =
+    couponState.error || null;
+
+
   const orderState =
     useAppSelector(
       (state) => state.order || {}
@@ -215,8 +298,9 @@ export function Checkout() {
     orderState.error || null;
 
 
-  const addresses =
-    Array.isArray(user?.addresses)
+  const addresses = savedAddresses.length
+    ? savedAddresses
+    : Array.isArray(user?.addresses)
       ? user.addresses
       : [];
 
@@ -347,6 +431,8 @@ export function Checkout() {
       checkoutAddress.houseNo
     );
 
+  const hasSelectedAddress = Boolean(selectedAddress?._id);
+
 
   const HandleAddressChange =
     (key, value) => {
@@ -359,7 +445,56 @@ export function Checkout() {
           [key]: value,
         })
       );
+      setAddressError("");
     };
+
+  const saveAddress = async () => {
+    if (!hasAddress) {
+      setAddressError("Please complete all required delivery address fields.");
+      return;
+    }
+    const result = await dispatch(AddAddress(manualAddress));
+    if (AddAddress.fulfilled.match(result)) {
+      setAddressId(result.payload.address._id);
+      setManualAddress(emptyAddress);
+      setAddressError("");
+      dispatch(GetProfile());
+    } else {
+      setAddressError(result.payload?.message || "Unable to save this address.");
+    }
+  };
+
+
+  const HandleApplyCode = async (code) => {
+    if (!code.trim()) {
+      return;
+    }
+
+    await dispatch(
+      ApplyCoupon({
+        code: code.trim().toUpperCase(),
+        subtotal: cartSubtotal,
+      })
+    );
+  };
+
+
+  const HandleCouponSubmit = async (event) => {
+    event.preventDefault();
+    await HandleApplyCode(couponCode);
+  };
+
+
+  const HandleTapCoupon = async (code) => {
+    setCouponCode(code);
+    await HandleApplyCode(code);
+  };
+
+
+  const HandleRemoveCoupon = () => {
+    setCouponCode("");
+    dispatch(RemoveAppliedCoupon());
+  };
 
 
   const PlaceOrder =
@@ -375,6 +510,7 @@ export function Checkout() {
 
 
       const orderData = {
+        addressId,
         address:
           checkoutAddress,
 
@@ -452,7 +588,76 @@ export function Checkout() {
 
 
   return (
-    <main className="page">
+    <main className="page checkout-page">
+
+      <style>{`
+        .checkout-page * { box-sizing: border-box; }
+
+        .checkout-steps {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+          margin: 28px 0;
+        }
+
+        .checkout-coupon-chips {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-bottom: 14px;
+        }
+        .checkout-coupon-chip {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 10px 12px;
+          border: 1px dashed var(--line, #e6e2da);
+          border-radius: 10px;
+          background: #faf8f4;
+          cursor: pointer;
+          text-align: left;
+          width: 100%;
+        }
+        .checkout-coupon-chip.applied {
+          border: 1px solid #3f7a4f;
+          background: #eaf4ec;
+          cursor: default;
+        }
+        .checkout-coupon-chip-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .checkout-coupon-code {
+          font-weight: 700;
+          font-size: 13px;
+          letter-spacing: 0.03em;
+          white-space: nowrap;
+        }
+        .checkout-coupon-meta { display: flex; flex-direction: column; min-width: 0; }
+        .checkout-coupon-meta span:first-child { font-size: 12.5px; font-weight: 600; }
+        .checkout-coupon-meta span:last-child {
+          font-size: 11px;
+          color: var(--ink-soft, #736b58);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .checkout-coupon-apply-btn {
+          flex-shrink: 0;
+          font-size: 11px;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          background: none;
+          border: 1px solid var(--ink, #201d19);
+          border-radius: 20px;
+          padding: 5px 12px;
+        }
+
+        @media (max-width: 640px) {
+          .checkout-steps { gap: 8px; }
+          .checkout-steps .btn { padding: 10px 6px; font-size: 12px; gap: 6px; }
+          .checkout-review-grid { grid-template-columns: 1fr !important; }
+          .checkout-address-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
 
       <section className="section">
 
@@ -469,11 +674,7 @@ export function Checkout() {
 
 
           <div
-            className="grid grid-3"
-
-            style={{
-              margin: "28px 0",
-            }}
+            className="checkout-steps"
           >
 
             {steps.map(
@@ -494,9 +695,9 @@ export function Checkout() {
                     }`
                   }
 
-                  onClick={() =>
-                    setStep(index)
-                  }
+                  onClick={() => {
+                    if (index === 0 || (index === 1 && hasAddress) || (index === 2 && hasAddress && paymentMethod)) setStep(index);
+                  }}
                 >
                   <Icon size={16} />
 
@@ -528,7 +729,7 @@ export function Checkout() {
                 {addresses.length >
                   0 && (
 
-                  <div className="grid grid-2">
+                  <div className="grid grid-2 checkout-address-grid">
 
                     {addresses.map(
                       (address) => (
@@ -615,16 +816,14 @@ export function Checkout() {
 
 
                   <div
-                    className="grid grid-2"
+                    className="grid grid-2 checkout-address-grid"
 
                     style={{
                       marginTop: 16,
                     }}
                   >
 
-                    {Object.keys(
-                      emptyAddress
-                    ).map((key) => (
+                    {Object.keys(emptyAddress).map((key) => (
 
                       <div
                         className="field"
@@ -632,7 +831,7 @@ export function Checkout() {
                       >
 
                         <label>
-                          {key}
+                          {key === "houseNo" ? "House / Flat No." : key === "fullName" ? "Full name" : key}
                         </label>
 
 
@@ -668,20 +867,28 @@ export function Checkout() {
 
                   </div>
 
+                  {addressError && <p className="subtitle" style={{ color: "#b42318", marginTop: 10 }}>{addressError}</p>}
+
+                  {!selectedAddress && (
+                    <button className="btn btn-secondary" type="button" disabled={!hasAddress} onClick={saveAddress}>
+                      Save delivery address
+                    </button>
+                  )}
+
 
                   <button
                     className="btn btn-primary"
                     type="button"
 
                     disabled={
-                      !hasAddress
+                      !hasSelectedAddress
                     }
 
                     onClick={() =>
                       setStep(1)
                     }
                   >
-                    Continue to Payment
+                    {hasSelectedAddress ? "Continue to Payment" : "Save or select an address first"}
                   </button>
 
                 </div>
@@ -698,7 +905,7 @@ export function Checkout() {
                 }}
               >
 
-                <div className="grid grid-2">
+                <div className="grid grid-2 checkout-address-grid">
 
                   <button
                     type="button"
@@ -722,27 +929,9 @@ export function Checkout() {
                   </button>
 
 
-                  <button
-                    type="button"
-
-                    className={
-                      `btn ${
-                        paymentMethod ===
-                        "Razorpay"
-                          ? "btn-primary"
-                          : "btn-soft"
-                      }`
-                    }
-
-                    onClick={() =>
-                      setPaymentMethod(
-                        "Razorpay"
-                      )
-                    }
-                  >
-                    Online Payment /
-                    Razorpay
-                  </button>
+                  <div className="btn btn-soft" style={{ cursor: "not-allowed", opacity: 0.65 }} title="Online payments are not configured yet">
+                    Online payment coming soon
+                  </div>
 
                 </div>
 
@@ -789,7 +978,7 @@ export function Checkout() {
 
 
             {step === 2 && (
-              <div className="grid grid-2">
+              <div className="grid grid-2 checkout-review-grid">
 
 
                 <div>
@@ -1002,6 +1191,7 @@ export function Checkout() {
                       display: "grid",
                       gap: 10,
                       marginTop: 14,
+                      marginBottom: 16,
                     }}
                   >
 
@@ -1092,6 +1282,105 @@ export function Checkout() {
                     </div>
 
                   </div>
+
+
+                  {/* APPLIED COUPON */}
+                  {appliedCoupon && (
+                    <div className="checkout-coupon-chip applied" style={{ marginBottom: 16 }}>
+                      <div className="checkout-coupon-chip-left">
+                        <BadgePercent size={16} />
+                        <div className="checkout-coupon-meta">
+                          <span>{appliedCoupon.code} applied</span>
+                          <span>You saved {money(discount)}</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        onClick={HandleRemoveCoupon}
+                        aria-label="Remove coupon"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+
+
+                  {/* AVAILABLE COUPONS */}
+                  {!appliedCoupon && availableCoupons.length > 0 && (
+                    <div>
+                      <span className="eyebrow" style={{ display: "block", marginBottom: 8 }}>
+                        Available Coupons
+                      </span>
+                      <div className="checkout-coupon-chips">
+                        {availableCoupons.map((couponItem) => {
+                          const { headline, sub } = describeCoupon(couponItem);
+                          return (
+                            <button
+                              type="button"
+                              key={couponItem._id || couponItem.code}
+                              className="checkout-coupon-chip"
+                              onClick={() => HandleTapCoupon(couponItem.code)}
+                              disabled={applyLoading}
+                            >
+                              <div className="checkout-coupon-chip-left">
+                                <BadgePercent size={16} />
+                                <div className="checkout-coupon-meta">
+                                  <span>
+                                    <span className="checkout-coupon-code">{couponItem.code}</span>
+                                    {"  "}
+                                    {headline}
+                                  </span>
+                                  <span>{sub}</span>
+                                </div>
+                              </div>
+                              <span className="checkout-coupon-apply-btn">Apply</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+
+                  {!appliedCoupon && (
+                    <form
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        marginBottom: 16,
+                      }}
+                      onSubmit={HandleCouponSubmit}
+                    >
+                      <input
+                        className="input"
+                        value={couponCode}
+                        onChange={(event) => setCouponCode(event.target.value)}
+                        placeholder="Have a coupon code?"
+                      />
+                      <button
+                        className="btn btn-secondary"
+                        type="submit"
+                        disabled={applyLoading}
+                      >
+                        {applyLoading ? "Applying..." : "Apply"}
+                      </button>
+                    </form>
+                  )}
+
+
+                  {couponError && (
+                    <small
+                      className="field-error"
+                      style={{
+                        display: "block",
+                        marginTop: -8,
+                        marginBottom: 12,
+                      }}
+                    >
+                      {couponError}
+                    </small>
+                  )}
 
 
                   {error && (

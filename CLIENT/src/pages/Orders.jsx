@@ -1,4 +1,4 @@
-import { Package } from "lucide-react";
+import { Package, RotateCcw } from "lucide-react";
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 
@@ -99,6 +99,10 @@ export function Orders() {
                         Order history
 
                     </h1>
+
+                    <Link className="btn btn-secondary" to="/returns" style={{ marginTop: 12 }}>
+                        <RotateCcw size={16} /> Track return requests
+                    </Link>
 
 
                     {error && (

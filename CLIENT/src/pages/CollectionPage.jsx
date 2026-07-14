@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Search, User, ShoppingBag, ChevronDown, List, Grid3x3, Heart, Repeat, Maximize2 } from "lucide-react";
+import { Search, User, ShoppingBag, ChevronDown, List, Grid3x3, Heart, Repeat, Maximize2, ArrowLeft, SlidersHorizontal, ArrowUpDown } from "lucide-react";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 
@@ -12,6 +12,14 @@ import Navbar from "../components/Navbar";
  *
  * Usage:
  *   <CollectionPage config={mensConfig} />
+ *
+ * MOBILE LAYOUT NOTE:
+ * On screens <= 768px this now renders a Flipkart-style shop header:
+ * back arrow + title + search/wishlist/bag icons, a Sort | Filter row,
+ * a horizontally scrollable category chip row, and product cards with
+ * always-visible wishlist heart, a rating badge on the image, and a
+ * discount tag — all restyled in Durotan's ink / olive-gold palette
+ * instead of the original bright reference colours.
  */
 
 const Star = ({ filled }) => (
@@ -76,6 +84,9 @@ export default function CollectionPage({ config }) {
     }),
     [accent]
   );
+
+  const discountPct = (p) =>
+    p.salePrice ? Math.round((1 - p.salePrice / p.price) * 100) : null;
 
   return (
     <div style={styles} className="durotan-page">
@@ -144,6 +155,87 @@ export default function CollectionPage({ config }) {
           display: flex;
           align-items: center;
           justify-content: center;
+        }
+
+        /* ---------- Mobile top bar (Flipkart-style, hidden on desktop) ---------- */
+        .dt-m-topbar {
+          display: none;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          padding: 14px 16px;
+          background: #1c1a17;
+          color: #fff;
+          position: sticky;
+          top: 0;
+          z-index: 20;
+        }
+        .dt-m-topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .dt-m-topbar-left button {
+          background: none; border: none; color: #fff; display: flex; padding: 2px;
+        }
+        .dt-m-topbar-title {
+          font-size: 15px;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .dt-m-topbar-icons { display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
+        .dt-m-topbar-icons button { background: none; border: none; color: #fff; display: flex; position: relative; padding: 2px; }
+        .dt-m-topbar-icons .dot {
+          position: absolute; top: -3px; right: -5px;
+          width: 8px; height: 8px; border-radius: 50%;
+          background: var(--accent);
+        }
+
+        /* ---------- Mobile sort/filter row ---------- */
+        .dt-m-sortfilter {
+          display: none;
+          border-bottom: 1px solid var(--line);
+        }
+        .dt-m-sortfilter button {
+          flex: 1;
+          display: flex; align-items: center; justify-content: center; gap: 7px;
+          background: #fff; border: none;
+          padding: 13px 10px;
+          font-size: 12.5px;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          color: var(--ink-soft);
+        }
+        .dt-m-sortfilter button.active { color: var(--ink); font-weight: 600; }
+        .dt-m-sortfilter button:first-child { border-right: 1px solid var(--line); }
+
+        /* ---------- Mobile category chip row ---------- */
+        .dt-m-chips {
+          display: none;
+          gap: 10px;
+          padding: 14px 16px;
+          overflow-x: auto;
+          scrollbar-width: none;
+          border-bottom: 1px solid var(--line);
+        }
+        .dt-m-chips::-webkit-scrollbar { display: none; }
+        .dt-m-chip {
+          flex-shrink: 0;
+          display: flex; align-items: center; gap: 6px;
+          padding: 9px 16px;
+          border: 1px solid var(--line);
+          border-radius: 20px;
+          font-size: 12px;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          color: var(--ink-soft);
+          background: #fff;
+          white-space: nowrap;
+        }
+        .dt-m-chip.active {
+          border-color: var(--accent);
+          background: var(--accent);
+          color: #fff;
+          font-weight: 600;
         }
 
         /* ---------- Hero ---------- */
@@ -370,6 +462,18 @@ export default function CollectionPage({ config }) {
           z-index: 2;
         }
         .dt-badge.dark { background: #1c1a17; color: #fff; }
+        .dt-rating-badge {
+          position: absolute; bottom: 10px; left: 10px;
+          display: flex; align-items: center; gap: 4px;
+          background: rgba(28,26,23,0.85);
+          color: #fff;
+          font-size: 10.5px;
+          font-weight: 600;
+          padding: 3px 8px;
+          border-radius: 3px;
+          z-index: 2;
+        }
+        .dt-rating-badge .stars { color: var(--accent); }
         .dt-card-actions {
           position: absolute;
           right: 10px;
@@ -423,6 +527,18 @@ export default function CollectionPage({ config }) {
           margin-left: 6px;
         }
         .dt-card-price .sale { color: #b3543a; }
+        .dt-discount-tag {
+          display: inline-block;
+          margin-top: 6px;
+          font-size: 10.5px;
+          font-weight: 600;
+          letter-spacing: 0.03em;
+          text-transform: uppercase;
+          color: #5c7a52;
+          background: #eef3ea;
+          padding: 3px 8px;
+          border-radius: 3px;
+        }
         .dt-swatch-row, .dt-thumb-row {
           display: flex; gap: 6px; margin-bottom: 8px;
         }
@@ -613,6 +729,27 @@ export default function CollectionPage({ config }) {
           .dt-cat-list li.active::after { display: none; }
           .dt-filter-block { border-bottom: none; padding: 0; }
           .dt-view-btn { margin-top: 6px; margin-bottom: 18px; }
+
+          /* ---- Flipkart-style mobile shop chrome ---- */
+          .dt-m-topbar { display: flex; }
+          .dt-m-sortfilter { display: flex; }
+          .dt-m-chips { display: flex; }
+          .dt-hero { display: none; } /* shop-style header replaces the big hero on mobile */
+
+          /* ---- Card adjustments to always show heart / rating / discount ---- */
+          .dt-card-actions {
+            opacity: 1;
+            transform: none;
+            top: 8px;
+            right: 8px;
+            gap: 6px;
+          }
+          .dt-card-actions button:not(:first-child) { display: none; } /* keep only wishlist on mobile */
+          .dt-card-actions button {
+            width: 26px; height: 26px;
+          }
+          .dt-quickview { display: none; }
+          .dt-card-name { font-size: 12.5px; }
         }
 
         @media (min-width: 981px) {
@@ -624,7 +761,6 @@ export default function CollectionPage({ config }) {
           .dt-header { flex-wrap: wrap; gap: 12px; }
           .dt-logo { font-size: 17px; letter-spacing: 0.14em; }
           .dt-icons { gap: 14px; }
-          .dt-hero { height: 320px; margin-top: -64px; }
           .dt-hero-eyebrow { font-size: 10px; }
           .dt-hero-title { font-size: 26px; }
           .dt-hero-sub { font-size: 12px; }
@@ -634,7 +770,51 @@ export default function CollectionPage({ config }) {
         }
       `}</style>
 
-      {/* HEADER + HERO */}
+      {/* MOBILE TOP BAR (Flipkart-style) — hidden on desktop */}
+      <div className="dt-m-topbar">
+        <div className="dt-m-topbar-left">
+          <button aria-label="Back"><ArrowLeft size={20} /></button>
+          <span className="dt-m-topbar-title">{activeCategory || heroTitle}</span>
+        </div>
+        <div className="dt-m-topbar-icons">
+          <button aria-label="Search"><Search size={19} /></button>
+          <button aria-label="Wishlist"><Heart size={19} /></button>
+          <button aria-label="Bag">
+            <ShoppingBag size={19} />
+            <span className="dot" />
+          </button>
+        </div>
+      </div>
+
+      {/* MOBILE SORT / FILTER ROW */}
+      <div className="dt-m-sortfilter">
+        <button>
+          <ArrowUpDown size={14} /> Sort
+        </button>
+        <button
+          className={mobileFiltersOpen ? "active" : ""}
+          onClick={() => setMobileFiltersOpen((v) => !v)}
+        >
+          <SlidersHorizontal size={14} /> Filter
+        </button>
+      </div>
+
+      {/* MOBILE CATEGORY CHIPS */}
+      {categories.length > 0 && (
+        <div className="dt-m-chips">
+          {categories.map((c) => (
+            <div
+              key={c.label}
+              className={`dt-m-chip ${c.label === activeCategory ? "active" : ""}`}
+              onClick={() => setActiveCategory(c.label)}
+            >
+              {c.label}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* HEADER + HERO (desktop) */}
       <Navbar/>
       <div
         className="dt-hero"
@@ -808,6 +988,11 @@ export default function CollectionPage({ config }) {
                 <div className="dt-card-img-wrap">
                   {p.badge && <span className={`dt-badge ${p.badgeDark ? "dark" : ""}`}>{p.badge}</span>}
                   <img src={p.image} alt={p.name} loading="lazy" />
+                  {p.rating && (
+                    <div className="dt-rating-badge">
+                      {p.rating.toFixed ? p.rating.toFixed(1) : p.rating} <span className="stars">★</span>
+                    </div>
+                  )}
                   <div className="dt-card-actions">
                     <button><Heart size={13} /></button>
                     <button><Maximize2 size={13} /></button>
@@ -827,11 +1012,6 @@ export default function CollectionPage({ config }) {
                   </div>
                 )}
                 {p.colourCount && <span className="dt-colour-count">{p.colourCount} colours</span>}
-                {p.rating && (
-                  <div className="dt-stars">
-                    {Array.from({ length: 5 }).map((_, si) => <Star key={si} filled={si < p.rating} />)}
-                  </div>
-                )}
 
                 <p className="dt-card-name">{p.name}</p>
                 <div className="dt-card-price">
@@ -844,6 +1024,9 @@ export default function CollectionPage({ config }) {
                     <span>${p.price}</span>
                   )}
                 </div>
+                {discountPct(p) && (
+                  <span className="dt-discount-tag">↓ {discountPct(p)}% off</span>
+                )}
 
                 {p.miniSizes && (
                   <div className="dt-mini-sizes">

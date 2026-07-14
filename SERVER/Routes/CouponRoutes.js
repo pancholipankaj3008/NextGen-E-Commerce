@@ -9,7 +9,7 @@ const CouponRouter = express.Router();
 
 CouponRouter.post( "/create-coupon", Auth("admin"),CreateCoupon);
 
-CouponRouter.get("/all-coupons",Auth("admin" ),GetAllCoupons);
+CouponRouter.get("/all-coupons",Auth("user","admin" ),GetAllCoupons);
 
 CouponRouter.post( "/apply-coupon", Auth("user","admin"), ApplyCoupon);
 

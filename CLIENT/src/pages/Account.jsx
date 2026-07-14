@@ -81,7 +81,9 @@ import {
 
 const emptyAddress = {
   type: "Home",
+  fullName: "",
   house: "",
+  houseNo: "",
   area: "",
   city: "",
   state: "",
@@ -506,12 +508,132 @@ export function Account() {
 
   ];
 
+  const initial = (user?.name || "N").trim().charAt(0).toUpperCase();
+  const activeTabLabel = nav.find(([key]) => key === tab)?.[1] || tab;
+
 
 
   return (
     <>
 
-      <main className="page">
+      <style>{`
+        .acc-page * { box-sizing: border-box; }
+
+        .acc-avatar {
+          width: 56px; height: 56px;
+          border-radius: 50%;
+          background: var(--ink, #201d19);
+          color: #fff;
+          display: flex; align-items: center; justify-content: center;
+          font-family: 'Cormorant Garamond', Georgia, serif;
+          font-size: 24px;
+          margin: 0 auto 12px;
+        }
+
+        .acc-nav-list { display: grid; gap: 8px; }
+        .acc-nav-list .btn { width: 100%; }
+
+        /* ---------- Mobile sticky tab bar ---------- */
+        .acc-mobile-bar { display: none; }
+
+        @media (max-width: 900px) {
+          .account-layout { grid-template-columns: 1fr !important; }
+
+          .account-sidebar { display: none !important; }
+
+          .acc-mobile-bar {
+            display: block;
+            position: sticky;
+            top: 0;
+            z-index: 15;
+            background: #fff;
+            border: 1px solid var(--line, #e6e2da);
+            border-radius: 12px;
+            margin-bottom: 18px;
+            overflow: hidden;
+          }
+          .acc-mobile-user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--line, #e6e2da);
+          }
+          .acc-mobile-avatar {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: var(--ink, #201d19);
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 18px;
+            flex-shrink: 0;
+          }
+          .acc-mobile-user-info { min-width: 0; flex: 1; }
+          .acc-mobile-user-info strong {
+            display: block;
+            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .acc-mobile-user-info span {
+            font-size: 11.5px;
+            color: var(--ink-soft, #736b58);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+          }
+          .acc-mobile-logout {
+            flex-shrink: 0;
+            background: none;
+            border: none;
+            color: #b3543a;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            padding: 6px 8px;
+          }
+          .acc-mobile-tabs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 12px 14px;
+            scrollbar-width: none;
+          }
+          .acc-mobile-tabs::-webkit-scrollbar { display: none; }
+          .acc-mobile-tab {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--line, #e6e2da);
+            font-size: 12.5px;
+            white-space: nowrap;
+            color: var(--ink-soft, #736b58);
+            background: #fff;
+          }
+          .acc-mobile-tab.active {
+            background: var(--ink, #201d19);
+            border-color: var(--ink, #201d19);
+            color: #fff;
+            font-weight: 600;
+          }
+
+          .account-stats { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
+        }
+
+        @media (max-width: 480px) {
+          .account-stats > div { padding: 14px !important; }
+          .account-stats strong { font-size: 24px !important; }
+        }
+      `}</style>
+
+      <main className="page acc-page">
 
         <section className="section">
 
@@ -519,8 +641,34 @@ export function Account() {
             className="container account-layout"
           >
 
+            {/* MOBILE STICKY USER + TAB BAR */}
+            <div className="acc-mobile-bar">
+              <div className="acc-mobile-user">
+                <div className="acc-mobile-avatar">{initial}</div>
+                <div className="acc-mobile-user-info">
+                  <strong>{user?.name || "NextGen Member"}</strong>
+                  <span>{user?.email}</span>
+                </div>
+                <button className="acc-mobile-logout" onClick={() => dispatch(Logout())}>
+                  <LogOut size={14} /> Logout
+                </button>
+              </div>
+              <div className="acc-mobile-tabs">
+                {nav.map(([key, label, Icon]) => (
+                  <button
+                    key={key}
+                    className={`acc-mobile-tab ${tab === key ? "active" : ""}`}
+                    onClick={() => setTab(key)}
+                  >
+                    <Icon size={13} />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-            {/* SIDEBAR */}
+
+            {/* SIDEBAR (desktop only) */}
 
             <aside
               className="card account-sidebar"
@@ -532,6 +680,8 @@ export function Account() {
                   marginBottom: 20,
                 }}
               >
+
+                <div className="acc-avatar">{initial}</div>
 
                 <h1 className="product-name">
 
@@ -567,12 +717,7 @@ export function Account() {
 
 
 
-              <div
-                style={{
-                  display: "grid",
-                  gap: 8,
-                }}
-              >
+              <div className="acc-nav-list">
 
                 {nav.map(
                   ([

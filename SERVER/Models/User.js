@@ -26,7 +26,6 @@ let userSchema = mongoose.Schema({
     dob: { type: Date },
     avatar: { type: String },
     isVerified: { type: Boolean, default: false },
-    refreshToken: { type: String },
     addresses: [addressSchema],
     wishlist: [{
         type: mongoose.Schema.Types.ObjectId,

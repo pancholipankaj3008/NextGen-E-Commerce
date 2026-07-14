@@ -1,8 +1,11 @@
 import {
+  BadgePercent,
+  Check,
   Minus,
   Plus,
   ShoppingBag,
   Trash2,
+  X,
 } from "lucide-react";
 
 import {
@@ -26,6 +29,7 @@ import {
 
 import {
   ApplyCoupon,
+  GetAllCoupons,
 } from "../features/coupon/couponThunk";
 
 import {
@@ -103,6 +107,50 @@ function getCartItemImage(
 }
 
 
+// Best-effort, field-name-agnostic summary of a coupon so this still
+// renders sensibly whatever shape the backend coupon documents use.
+function describeCoupon(couponItem) {
+  const type =
+    couponItem.discountType ||
+    couponItem.type ||
+    "";
+
+  const value =
+    couponItem.discountValue ??
+    couponItem.discountPercent ??
+    couponItem.percentage ??
+    couponItem.amount ??
+    couponItem.discountAmount ??
+    null;
+
+  let headline = "Special offer";
+
+  if (value != null) {
+    if (
+      normalize(type).includes("percent") ||
+      couponItem.discountPercent != null ||
+      couponItem.percentage != null
+    ) {
+      headline = `${value}% OFF`;
+    } else {
+      headline = `${money(value)} OFF`;
+    }
+  }
+
+  const minOrder =
+    couponItem.minOrderAmount ??
+    couponItem.minOrderValue ??
+    couponItem.minPurchase ??
+    null;
+
+  const sub = minOrder
+    ? `On orders above ${money(minOrder)}`
+    : couponItem.description || "Tap to apply";
+
+  return { headline, sub };
+}
+
+
 export function Cart() {
   const [coupon, setCoupon] =
     useState("");
@@ -140,6 +188,12 @@ export function Cart() {
     (state) => state.coupon || {}
   );
 
+  const availableCoupons = Array.isArray(
+    couponState.coupons
+  )
+    ? couponState.coupons
+    : [];
+
   const appliedCoupon =
     couponState.appliedCoupon || null;
 
@@ -162,6 +216,7 @@ export function Cart() {
 
   useEffect(() => {
     dispatch(GetCart());
+    dispatch(GetAllCoupons());
   }, [dispatch]);
 
 
@@ -292,27 +347,37 @@ export function Cart() {
     };
 
 
+  const HandleApplyCode = async (code) => {
+    if (!code.trim()) {
+      return;
+    }
+
+    await dispatch(
+      ApplyCoupon({
+        code: code.trim().toUpperCase(),
+        subtotal,
+      })
+    );
+  };
+
+
   const HandleCouponSubmit =
     async (event) => {
       event.preventDefault();
-
-
-      if (!coupon.trim()) {
-        return;
-      }
-
-
-      await dispatch(
-        ApplyCoupon({
-          code:
-            coupon
-              .trim()
-              .toUpperCase(),
-
-          subtotal,
-        })
-      );
+      await HandleApplyCode(coupon);
     };
+
+
+  const HandleTapCoupon = async (code) => {
+    setCoupon(code);
+    await HandleApplyCode(code);
+  };
+
+
+  const HandleRemoveCoupon = () => {
+    setCoupon("");
+    dispatch(RemoveAppliedCoupon());
+  };
 
 
   if (
@@ -368,7 +433,123 @@ export function Cart() {
 
 
   return (
-    <main className="page">
+    <main className="page cart-page">
+
+      <style>{`
+        .cart-page * { box-sizing: border-box; }
+
+        .cart-layout {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 360px;
+          gap: 24px;
+          align-items: start;
+        }
+
+        .cart-summary-aside { position: sticky; top: 24px; }
+
+        .cart-items-list { display: grid; gap: 14px; }
+
+        .cart-item-card {
+          display: grid;
+          grid-template-columns: auto 1fr auto auto auto;
+          align-items: center;
+          gap: 16px;
+          padding: 16px;
+          border: 1px solid var(--line, #e6e2da);
+          border-radius: 12px;
+        }
+
+        .cart-item-info strong { display: block; }
+
+        .cart-qty-stepper {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          border: 1px solid var(--line, #e6e2da);
+          border-radius: 8px;
+          padding: 4px;
+        }
+
+        .cart-coupon-chips {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+        .cart-coupon-chip {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 10px 12px;
+          border: 1px dashed var(--line, #e6e2da);
+          border-radius: 10px;
+          background: #faf8f4;
+          cursor: pointer;
+          text-align: left;
+        }
+        .cart-coupon-chip.applied {
+          border: 1px solid #3f7a4f;
+          background: #eaf4ec;
+          cursor: default;
+        }
+        .cart-coupon-chip-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .cart-coupon-code {
+          font-weight: 700;
+          font-size: 13px;
+          letter-spacing: 0.03em;
+          white-space: nowrap;
+        }
+        .cart-coupon-meta { display: flex; flex-direction: column; min-width: 0; }
+        .cart-coupon-meta span:first-child { font-size: 12.5px; font-weight: 600; }
+        .cart-coupon-meta span:last-child {
+          font-size: 11px;
+          color: var(--ink-soft, #736b58);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .cart-coupon-apply-btn {
+          flex-shrink: 0;
+          font-size: 11px;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          background: none;
+          border: 1px solid var(--ink, #201d19);
+          border-radius: 20px;
+          padding: 5px 12px;
+        }
+        .cart-coupon-applied-tag {
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 11px;
+          color: #3f7a4f;
+          font-weight: 600;
+        }
+
+        @media (max-width: 900px) {
+          .cart-layout { grid-template-columns: 1fr; }
+          .cart-summary-aside { position: static; top: auto; }
+        }
+
+        @media (max-width: 640px) {
+          .cart-item-card {
+            grid-template-columns: auto 1fr auto;
+            grid-template-areas:
+              "img info remove"
+              "img qty  price";
+            row-gap: 10px;
+          }
+          .cart-item-card > img,
+          .cart-item-card > .skeleton { grid-area: img; }
+          .cart-item-card .cart-item-info { grid-area: info; }
+          .cart-item-card .cart-item-remove { grid-area: remove; }
+          .cart-item-card .cart-item-qty { grid-area: qty; }
+          .cart-item-card .cart-item-price { grid-area: price; justify-self: end; }
+        }
+      `}</style>
 
       <section className="section-tight">
 
@@ -395,309 +576,240 @@ export function Cart() {
       >
 
         <div
-          className="container"
-          style={{
-            display: "grid",
-
-            gridTemplateColumns:
-              "minmax(0, 1fr) 360px",
-
-            gap: 24,
-          }}
+          className="container cart-layout"
         >
 
 
-          <div className="table-wrap">
+          <div className="cart-items-list">
 
-            <table className="table">
-
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>Price</th>
-                  <th>Quantity</th>
-                  <th>Subtotal</th>
-                  <th />
-                </tr>
-              </thead>
+            {items.map((item) => {
+              const product =
+                item.product || item;
 
 
-              <tbody>
-
-                {items.map((item) => {
-                  const product =
-                    item.product || item;
+              const cartItemId =
+                item._id;
 
 
-                  const cartItemId =
-                    item._id;
+              const qty =
+                Number(
+                  item.quantity || 1
+                );
 
 
-                  const qty =
-                    Number(
-                      item.quantity || 1
-                    );
+              const price =
+                Number(
+                  product.finalPrice ??
+                  item.price ??
+                  product.price ??
+                  0
+                );
 
 
-                  const price =
-                    Number(
-                      product.finalPrice ??
-                      item.price ??
-                      product.price ??
-                      0
-                    );
+              const selectedVariant =
+                getSelectedVariant(
+                  product,
+                  item.color
+                );
 
 
-                  const selectedVariant =
-                    getSelectedVariant(
-                      product,
-                      item.color
-                    );
+              const selectedSize =
+                selectedVariant
+                  ?.sizes
+                  ?.find(
+                    (sizeItem) =>
+                      normalize(
+                        sizeItem.size
+                      ) ===
+                      normalize(
+                        item.size
+                      )
+                  );
 
 
-                  const selectedSize =
-                    selectedVariant
-                      ?.sizes
-                      ?.find(
-                        (sizeItem) =>
-                          normalize(
-                            sizeItem.size
-                          ) ===
-                          normalize(
-                            item.size
-                          )
-                      );
+              const availableStock =
+                Number(
+                  selectedSize
+                    ?.stock || 0
+                );
 
 
-                  const availableStock =
-                    Number(
-                      selectedSize
-                        ?.stock || 0
-                    );
+              const image =
+                getCartItemImage(
+                  product,
+                  item.color
+                );
 
 
-                  const image =
-                    getCartItemImage(
-                      product,
-                      item.color
-                    );
+              return (
+                <div
+                  className="cart-item-card"
+                  key={
+                    cartItemId ||
+                    `${product._id}-${item.color}-${item.size}`
+                  }
+                >
+
+                  {image ? (
+                    <img
+                      src={image}
+
+                      alt={
+                        product.title ||
+                        product.name ||
+                        "Product"
+                      }
+
+                      style={{
+                        width: 64,
+                        height: 76,
+                        borderRadius: 8,
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className="skeleton"
+
+                      style={{
+                        width: 64,
+                        height: 76,
+                        borderRadius: 8,
+                      }}
+                    />
+                  )}
 
 
-                  return (
-                    <tr
-                      key={
-                        cartItemId ||
-                        `${product._id}-${item.color}-${item.size}`
+                  <div className="cart-item-info">
+
+                    <strong>
+                      {
+                        product.title ||
+                        product.name
+                      }
+                    </strong>
+
+
+                    <div
+                      className="product-meta"
+
+                      style={{
+                        marginTop: 5,
+                      }}
+                    >
+                      {
+                        [
+                          item.color,
+                          item.size,
+                        ]
+                          .filter(Boolean)
+                          .join(" / ")
+                      }
+                    </div>
+
+
+                    {availableStock > 0 && (
+                      <small
+                        className="product-meta"
+                        style={{
+                          display: "block",
+                          marginTop: 4,
+                        }}
+                      >
+                        {availableStock} available
+                      </small>
+                    )}
+
+                    <div style={{ marginTop: 6 }}>
+                      {money(price)}
+                    </div>
+
+                  </div>
+
+
+                  <div className="cart-item-qty cart-qty-stepper">
+
+                    <button
+                      className="icon-btn"
+                      type="button"
+
+                      disabled={
+                        actionLoading ||
+                        qty <= 1
+                      }
+
+                      onClick={() =>
+                        HandleQuantityUpdate(
+                          cartItemId,
+                          qty - 1
+                        )
                       }
                     >
-
-                      <td>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 12,
-                            alignItems:
-                              "center",
-                          }}
-                        >
-
-                          {image ? (
-                            <img
-                              src={image}
-
-                              alt={
-                                product.title ||
-                                product.name ||
-                                "Product"
-                              }
-
-                              style={{
-                                width: 64,
-                                height: 76,
-                                borderRadius: 8,
-                                objectFit:
-                                  "cover",
-                              }}
-                            />
-                          ) : (
-                            <div
-                              className="skeleton"
-
-                              style={{
-                                width: 64,
-                                height: 76,
-                                borderRadius: 8,
-                              }}
-                            />
-                          )}
+                      <Minus size={14} />
+                    </button>
 
 
-                          <div>
-
-                            <strong>
-                              {
-                                product.title ||
-                                product.name
-                              }
-                            </strong>
+                    <strong>
+                      {qty}
+                    </strong>
 
 
-                            <div
-                              className="product-meta"
+                    <button
+                      className="icon-btn"
+                      type="button"
 
-                              style={{
-                                marginTop: 5,
-                              }}
-                            >
-                              {
-                                [
-                                  item.color,
-                                  item.size,
-                                ]
-                                  .filter(
-                                    Boolean
-                                  )
-                                  .join(" / ")
-                              }
-                            </div>
+                      disabled={
+                        actionLoading ||
+                        availableStock <=
+                          qty
+                      }
 
+                      onClick={() =>
+                        HandleQuantityUpdate(
+                          cartItemId,
+                          qty + 1
+                        )
+                      }
+                    >
+                      <Plus size={14} />
+                    </button>
 
-                            {availableStock > 0 && (
-                              <small
-                                className="product-meta"
-                                style={{
-                                  display:
-                                    "block",
-
-                                  marginTop: 4,
-                                }}
-                              >
-                                {
-                                  availableStock
-                                }{" "}
-                                available
-                              </small>
-                            )}
-
-                          </div>
-
-                        </div>
-
-                      </td>
+                  </div>
 
 
-                      <td>
-                        {money(price)}
-                      </td>
+                  <strong className="cart-item-price">
+                    {money(price * qty)}
+                  </strong>
 
 
-                      <td>
+                  <button
+                    className="icon-btn cart-item-remove"
+                    type="button"
 
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems:
-                              "center",
-                            gap: 8,
-                          }}
-                        >
+                    disabled={
+                      actionLoading
+                    }
 
-                          <button
-                            className="icon-btn"
-                            type="button"
+                    onClick={() =>
+                      HandleRemoveItem(
+                        cartItemId
+                      )
+                    }
 
-                            disabled={
-                              actionLoading ||
-                              qty <= 1
-                            }
+                    aria-label="Remove item"
+                  >
+                    <Trash2 size={15} />
+                  </button>
 
-                            onClick={() =>
-                              HandleQuantityUpdate(
-                                cartItemId,
-                                qty - 1
-                              )
-                            }
-                          >
-                            <Minus size={14} />
-                          </button>
-
-
-                          <strong>
-                            {qty}
-                          </strong>
-
-
-                          <button
-                            className="icon-btn"
-                            type="button"
-
-                            disabled={
-                              actionLoading ||
-                              availableStock <=
-                                qty
-                            }
-
-                            onClick={() =>
-                              HandleQuantityUpdate(
-                                cartItemId,
-                                qty + 1
-                              )
-                            }
-                          >
-                            <Plus size={14} />
-                          </button>
-
-                        </div>
-
-                      </td>
-
-
-                      <td>
-                        {
-                          money(
-                            price * qty
-                          )
-                        }
-                      </td>
-
-
-                      <td>
-
-                        <button
-                          className="icon-btn"
-                          type="button"
-
-                          disabled={
-                            actionLoading
-                          }
-
-                          onClick={() =>
-                            HandleRemoveItem(
-                              cartItemId
-                            )
-                          }
-
-                          aria-label="Remove item"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-
-                      </td>
-
-                    </tr>
-                  );
-                })}
-
-              </tbody>
-
-            </table>
+                </div>
+              );
+            })}
 
           </div>
 
 
           <aside
-            className="card"
+            className="card cart-summary-aside"
 
             style={{
               padding: 22,
@@ -804,6 +916,65 @@ export function Cart() {
             </div>
 
 
+            {/* APPLIED COUPON */}
+            {appliedCoupon && (
+              <div className="cart-coupon-chip applied" style={{ marginBottom: 16 }}>
+                <div className="cart-coupon-chip-left">
+                  <BadgePercent size={16} />
+                  <div className="cart-coupon-meta">
+                    <span>{appliedCoupon.code} applied</span>
+                    <span>You saved {money(discountAmount)}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={HandleRemoveCoupon}
+                  aria-label="Remove coupon"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
+
+            {/* AVAILABLE COUPONS */}
+            {!appliedCoupon && availableCoupons.length > 0 && (
+              <div>
+                <span className="eyebrow" style={{ display: "block", marginBottom: 8 }}>
+                  Available Coupons
+                </span>
+                <div className="cart-coupon-chips">
+                  {availableCoupons.map((couponItem) => {
+                    const { headline, sub } = describeCoupon(couponItem);
+                    return (
+                      <button
+                        type="button"
+                        key={couponItem._id || couponItem.code}
+                        className="cart-coupon-chip"
+                        onClick={() => HandleTapCoupon(couponItem.code)}
+                        disabled={applyLoading}
+                      >
+                        <div className="cart-coupon-chip-left">
+                          <BadgePercent size={16} />
+                          <div className="cart-coupon-meta">
+                            <span>
+                              <span className="cart-coupon-code">{couponItem.code}</span>
+                              {"  "}
+                              {headline}
+                            </span>
+                            <span>{sub}</span>
+                          </div>
+                        </div>
+                        <span className="cart-coupon-apply-btn">Apply</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+
             <form
               style={{
                 display: "flex",
@@ -827,7 +998,7 @@ export function Cart() {
                   )
                 }
 
-                placeholder="Coupon"
+                placeholder="Have a coupon code?"
               />
 
 

@@ -1,5 +1,27 @@
 let jwt = require("jsonwebtoken");
 
+const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+};
+
+function issueAccessToken(res, decoded) {
+    const token = jwt.sign({ id: decoded.id, role: decoded.role }, process.env.ACCESS, { expiresIn: "30m" });
+    res.cookie("accessToken", token, { ...cookieOptions, maxAge: 30 * 60 * 1000 });
+    return token;
+}
+
+function RefreshAccessToken(req, res) {
+    try {
+        const decoded = jwt.verify(req.cookies.refreshToken, process.env.REFRESH);
+        issueAccessToken(res, decoded);
+        return res.json({ success: true });
+    } catch {
+        return res.status(401).json({ success: false, message: "Please login again" });
+    }
+}
+
 function Auth(...roles) {
 
     return (req, res, next) => {
@@ -56,21 +78,7 @@ function Auth(...roles) {
                     });
                 }
 
-                let newAccessToken = jwt.sign(
-                    {
-                        id: decoded.id,
-                        role: decoded.role
-                    },
-                    process.env.ACCESS,
-                    { expiresIn: "15m" }
-                );
-
-                res.cookie("accessToken", newAccessToken, {
-                    httpOnly: true,
-                    secure: false,      // localhost
-                    sameSite: "lax",
-                    maxAge: 15 * 60 * 1000
-                });
+                issueAccessToken(res, decoded);
 
                 req.id = decoded.id;
                 req.role = decoded.role;
@@ -87,4 +95,4 @@ function Auth(...roles) {
     }
 }
 
-module.exports = { Auth };
+module.exports = { Auth, RefreshAccessToken };

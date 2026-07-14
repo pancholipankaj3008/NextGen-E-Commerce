@@ -4,7 +4,8 @@ import {
 } from "lucide-react";
 
 import {
-    useEffect
+    useEffect,
+    useState
 } from "react";
 
 import {
@@ -24,6 +25,8 @@ import {
     ClearSingleOrder
 
 } from "../features/order/orderSlice";
+
+import { CreateReturn } from "../features/return/returnThunk";
 
 import {
 
@@ -51,6 +54,8 @@ export function OrderDetails() {
 
 
     const dispatch = useAppDispatch();
+    const [returnReason, setReturnReason] = useState("");
+    const [showReturnForm, setShowReturnForm] = useState(false);
 
 
     const {
@@ -211,6 +216,16 @@ export function OrderDetails() {
             "out for delivery",
             "delivered"
         ].includes(status);
+
+    const returnDeadline = order.deliveredAt
+        ? new Date(new Date(order.deliveredAt).getTime() + 7 * 24 * 60 * 60 * 1000)
+        : null;
+    const canReturn = status === "delivered" && returnDeadline && returnDeadline >= new Date();
+    const submitReturn = async () => {
+        if (!returnReason.trim()) return;
+        const result = await dispatch(CreateReturn({ orderId: id, reason: returnReason }));
+        if (CreateReturn.fulfilled.match(result)) setShowReturnForm(false);
+    };
 
 
     return (
@@ -439,6 +454,22 @@ export function OrderDetails() {
                                 }
 
                             </button>
+
+                            {status === "delivered" && (
+                                <div style={{ marginTop: 14 }}>
+                                    <button className="btn btn-secondary" disabled={!canReturn} onClick={() => setShowReturnForm((value) => !value)}>
+                                        {canReturn ? "Return Order" : "Return period ended"}
+                                    </button>
+                                    {canReturn && returnDeadline && <p className="product-meta">Return available until {returnDeadline.toLocaleDateString()}</p>}
+                                    {showReturnForm && (
+                                        <div className="field" style={{ marginTop: 10 }}>
+                                            <label>Reason for return</label>
+                                            <textarea className="textarea" value={returnReason} onChange={(event) => setReturnReason(event.target.value)} placeholder="Tell us why you want to return this order" />
+                                            <button className="btn btn-primary" disabled={actionLoading || !returnReason.trim()} onClick={submitReturn}>Submit return request</button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                         </div>
 

@@ -47,11 +47,10 @@ export default function ProductCard({
   // PRODUCT ROUTE
   // =====================================
 
-  const productPath = `/product/${
-    product.slug ||
+  const productPath = `/product/${product.slug ||
     product._id ||
     product.id
-  }`;
+    }`;
 
 
   // =====================================
@@ -106,25 +105,45 @@ export default function ProductCard({
   const rating = Number(
     product.ratings || 0
   );
+ 
 
 
   return (
-    <article className="card card-hover product-card">
-
+    
+    <article
+      className="card card-hover product-card"
+      style={{
+        padding: 0,
+        overflow: "hidden",
+        borderRadius: 12,
+      }}
+    >
       {/* IMAGE */}
 
       <Link to={productPath}>
         <div
-          className="product-media"
-          style={{
-            position: "relative",
-          }}
-        >
+  className="product-media"
+  style={{
+    position: "relative",
+    width: "100%",
+    aspectRatio: "3/4",
+    overflow: "hidden",
+    background: "#f5f5f5",
+    borderRadius: "12px 12px 0 0",
+  }}
+>
           {image ? (
             <img
-              src={image}
-              alt={item.name || product.title}
-            />
+  src={image}
+  alt={item.name || product.title}
+  style={{
+    width: "100%",
+    height: "100%",
+    display: "block",
+    objectFit: "cover",
+  }}
+/>
+            
           ) : (
             <div
               className="skeleton"
@@ -160,11 +179,11 @@ export default function ProductCard({
               </span>
             )}
 
-            {discountPercent > 0 && (
+            {/* {discountPercent > 0 && (
               <span className="badge">
                 {discountPercent}% OFF
               </span>
-            )}
+            )} */}
 
             {totalStock <= 0 && (
               <span className="badge">
@@ -172,7 +191,63 @@ export default function ProductCard({
               </span>
             )}
           </div>
+          <button
+            className="icon-btn"
+            onClick={() => onWishlist?.(product)}
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 10,
+              width: 34,
+              height: 34,
+              borderRadius: "50%",
+              background: "#fff",
+              boxShadow: "0 2px 8px rgba(0,0,0,.15)",
+              color: isWishlisted ? "#e53935" : "#222"
+            }}
+          >
+            <Heart
+              size={17}
+              fill={isWishlisted ? "currentColor" : "none"}
+            />
+          </button>
+
+
         </div>
+
+        {rating > 0 && (
+
+          <div
+            style={{
+              position: "absolute",
+              left: 10,
+              bottom: 10,
+              background: "#fff",
+              padding: "4px 8px",
+              borderRadius: 6,
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: 12,
+              fontWeight: 600
+            }}
+          >
+
+            <Star
+              size={12}
+              fill="green"
+              color="green"
+            />
+
+            {rating.toFixed(1)}
+
+            {product.numReviews &&
+              ` | ${product.numReviews}`}
+
+          </div>
+
+        )}
+
       </Link>
 
 
@@ -181,10 +256,9 @@ export default function ProductCard({
       <div className="product-body">
 
         <div
+          className="product-body"
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 12,
+            padding: "10px"
           }}
         >
           <div style={{ minWidth: 0 }}>
@@ -193,9 +267,10 @@ export default function ProductCard({
 
             {product.brand && (
               <div
-                className="product-meta"
                 style={{
-                  marginBottom: 4,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#8e24aa"
                 }}
               >
                 {product.brand}
@@ -212,7 +287,16 @@ export default function ProductCard({
                 textDecoration: "none",
               }}
             >
-              <h3 className="product-name">
+              <h3
+                style={{
+                  fontSize: 14,
+                  fontWeight: 500,
+                  lineHeight: "20px",
+                  height: 40,
+                  overflow: "hidden",
+                  margin: "4px 0"
+                }}
+              >
                 {item.name || product.title}
               </h3>
             </Link>
@@ -220,7 +304,7 @@ export default function ProductCard({
 
             {/* META */}
 
-            <div className="product-meta">
+            {/* <div className="product-meta">
               {[
                 item.category ||
                   product.category,
@@ -233,37 +317,14 @@ export default function ProductCard({
               ]
                 .filter(Boolean)
                 .join(" / ")}
-            </div>
+            </div> */}
 
 
-            {/* RATING */}
 
-            {rating > 0 && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                  marginTop: 7,
-                }}
-              >
-                <Star
-                  size={13}
-                  fill="currentColor"
-                />
-
-                <span className="product-meta">
-                  {rating.toFixed(1)}
-
-                  {product.numReviews > 0 &&
-                    ` (${product.numReviews})`}
-                </span>
-              </div>
-            )}
           </div>
 
 
-          {/* WISHLIST */}
+          {/* WISHLIST
 
           <button
             className="icon-btn"
@@ -292,7 +353,7 @@ export default function ProductCard({
                   : "none"
               }
             />
-          </button>
+          </button> */}
         </div>
 
 
@@ -308,41 +369,93 @@ export default function ProductCard({
           }}
         >
           <div>
-            <div className="price">
-              {money(displayPrice)}
-            </div>
+            <div>
 
-            {discountPercent > 0 &&
-              originalPrice >
-                displayPrice && (
-                <div
-                  className="product-meta"
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexWrap: "wrap"
+                }}
+              >
+
+                <span
                   style={{
-                    textDecoration:
-                      "line-through",
-                    marginTop: 2,
+                    color: "green",
+                    fontWeight: 700,
+                    fontSize: 14
                   }}
                 >
+
+                  ↓{discountPercent}%
+
+                </span>
+
+                <span
+                  style={{
+                    textDecoration: "line-through",
+                    fontSize: 13,
+                    color: "#777"
+                  }}
+                >
+
                   {money(originalPrice)}
-                </div>
-              )}
+
+                </span>
+
+                <strong
+                  style={{
+                    fontSize: 19
+                  }}
+                >
+
+                  {money(displayPrice)}
+
+
+                </strong>
+
+
+              </div>
+              <span
+style={{
+display:"inline-block",
+background:"#d7ffd7",
+color:"green",
+padding:"2px 6px",
+borderRadius:4,
+fontSize:11,
+fontWeight:600,
+marginTop:4
+}}
+>
+
+Hot Deal
+
+</span>
+<div
+style={{
+fontSize:12,
+color:"#555",
+marginTop:6
+}}
+>
+
+Delivery by {new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString("en-IN", {
+  weekday: "short",
+  day: "numeric",
+  month: "short"
+})}
+
+</div>
+
+            </div>
+
+
           </div>
 
 
-          <button
-            className="btn btn-secondary"
-            type="button"
-            disabled={totalStock <= 0}
-            onClick={() =>
-              onCart?.(product)
-            }
-          >
-            <ShoppingBag size={15} />
-
-            {totalStock > 0
-              ? "Add"
-              : "Sold Out"}
-          </button>
+         
         </div>
       </div>
     </article>

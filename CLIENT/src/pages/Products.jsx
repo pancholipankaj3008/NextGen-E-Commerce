@@ -1,4 +1,4 @@
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, ArrowLeft, Search, Heart, ShoppingBag, ArrowUpDown, X } from "lucide-react";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -26,7 +26,36 @@ import { backendGender, backendSort } from "../utils/product";
 
 const emptyArray = [];
 
+const SORT_CHIPS = [
+    { value: "newest", label: "Newest" },
+    { value: "price-low", label: "Price: Low to High" },
+    { value: "price-high", label: "Price: High to Low" },
+    { value: "popularity", label: "Popularity" },
+];
 
+const COLLECTION_CHIPS = [
+    { value: "", label: "All" },
+    { value: "Summer Collection", label: "Summer" },
+    { value: "Winter Drop", label: "Winter Drop" },
+    { value: "Streetwear Collection", label: "Streetwear" },
+    { value: "Limited Edition", label: "Limited Edition" },
+];
+
+/**
+ * MOBILE LAYOUT NOTE:
+ * On screens <= 768px this renders a Flipkart-style shop header (back
+ * arrow, page title, search/wishlist/bag icons), a Sort | Filter row,
+ * and a horizontally scrollable collection chip row — restyled in the
+ * NextGen premium palette (beige/olive/gold, Cormorant Garamond for the
+ * title) instead of the bright reference colours. The existing filter
+ * panel (category, search, collection dropdown, sort dropdown) is kept
+ * for desktop and still opens on mobile via the "Filter" chip.
+ *
+ * Note: individual product cards are rendered by <ProductCard /> (not
+ * included in this file), so the rating badge / discount tag / always
+ * visible wishlist heart from the reference image can't be added here —
+ * share ProductCard.jsx and I'll match those too.
+ */
 
 export function Products({ gender, collection }) {
 
@@ -76,6 +105,7 @@ export function Products({ gender, collection }) {
     });
 
     const [filtersOpen, setFiltersOpen] = useState(false);
+    const [mobileSortOpen, setMobileSortOpen] = useState(false);
     const paramsKey = params.toString();
 
 
@@ -415,9 +445,193 @@ const HandleAddToCart = async (product) => {
 
     return (
 
-        <main className="page">
+        <main className="page ng-products">
 
-            <section className="section-tight">
+            <style>{`
+                .ng-products {
+                    --ng-ink: #2f2b22;
+                    --ng-ink-soft: #736b58;
+                    --ng-bg: #faf7f0;
+                    --ng-line: #e6ded0;
+                    --ng-olive: #6b6b47;
+                    --ng-gold: #a6863f;
+                }
+
+                /* ---------- Mobile shop header (Flipkart-style), hidden on desktop ---------- */
+                .ng-m-topbar {
+                    display: none;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 14px;
+                    padding: 14px 18px;
+                    background: var(--ng-ink);
+                    color: #fff;
+                    position: sticky;
+                    top: 0;
+                    z-index: 20;
+                }
+                .ng-m-topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+                .ng-m-topbar-left button, .ng-m-topbar-icons button {
+                    background: none; border: none; color: #fff; display: flex; padding: 2px;
+                }
+                .ng-m-topbar-title {
+                    font-family: 'Cormorant Garamond', Georgia, serif;
+                    font-size: 19px;
+                    letter-spacing: 0.03em;
+                    text-transform: capitalize;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+                .ng-m-topbar-icons { display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
+                .ng-m-topbar-icons button { position: relative; }
+                .ng-m-topbar-icons .dot {
+                    position: absolute; top: -3px; right: -5px;
+                    width: 8px; height: 8px; border-radius: 50%;
+                    background: var(--ng-gold);
+                }
+
+                /* ---------- Mobile sort/filter row ---------- */
+                .ng-m-sortfilter {
+                    display: none;
+                    border-bottom: 1px solid var(--ng-line);
+                    background: var(--ng-bg);
+                }
+                .ng-m-sortfilter button {
+                    flex: 1;
+                    display: flex; align-items: center; justify-content: center; gap: 7px;
+                    background: none; border: none;
+                    padding: 13px 10px;
+                    font-size: 12.5px;
+                    letter-spacing: 0.05em;
+                    text-transform: uppercase;
+                    color: var(--ng-ink-soft);
+                }
+                .ng-m-sortfilter button.active { color: var(--ng-ink); font-weight: 600; }
+                .ng-m-sortfilter button:first-child { border-right: 1px solid var(--ng-line); }
+
+                /* ---------- Mobile sort sheet ---------- */
+                .ng-m-sort-sheet {
+                    display: none;
+                }
+                .ng-m-sort-sheet.open {
+                    display: block;
+                    background: #fff;
+                    border-bottom: 1px solid var(--ng-line);
+                    padding: 6px 18px 12px;
+                }
+                .ng-m-sort-option {
+                    display: flex; align-items: center; justify-content: space-between;
+                    padding: 12px 0;
+                    font-size: 13.5px;
+                    color: var(--ng-ink-soft);
+                    border-bottom: 1px solid var(--ng-line);
+                }
+                .ng-m-sort-option:last-child { border-bottom: none; }
+                .ng-m-sort-option.active { color: var(--ng-gold); font-weight: 600; }
+
+                /* ---------- Mobile collection chip row ---------- */
+                .ng-m-chips {
+                    display: none;
+                    gap: 10px;
+                    padding: 14px 18px;
+                    overflow-x: auto;
+                    scrollbar-width: none;
+                    border-bottom: 1px solid var(--ng-line);
+                    background: var(--ng-bg);
+                }
+                .ng-m-chips::-webkit-scrollbar { display: none; }
+                .ng-m-chip {
+                    flex-shrink: 0;
+                    padding: 9px 16px;
+                    border: 1px solid var(--ng-line);
+                    border-radius: 20px;
+                    font-size: 12px;
+                    letter-spacing: 0.03em;
+                    color: var(--ng-ink-soft);
+                    background: #fff;
+                    white-space: nowrap;
+                }
+                .ng-m-chip.active {
+                    border-color: var(--ng-gold);
+                    background: var(--ng-gold);
+                    color: #fff;
+                    font-weight: 600;
+                }
+
+                .ng-desktop-title { }
+
+                @media (max-width: 768px) {
+                    .ng-m-topbar { display: flex; }
+                    .ng-m-sortfilter { display: flex; }
+                    .ng-m-chips { display: flex; }
+                    .ng-desktop-title { display: none; }
+                    .product-filter-toggle { display: none !important; } /* replaced by ng-m-sortfilter */
+                }
+            `}</style>
+
+            {/* MOBILE SHOP HEADER (Flipkart-style) */}
+            <div className="ng-m-topbar">
+                <div className="ng-m-topbar-left">
+                    <button aria-label="Back" onClick={() => navigate(-1)}><ArrowLeft size={20} /></button>
+                    <span className="ng-m-topbar-title">{header}</span>
+                </div>
+                <div className="ng-m-topbar-icons">
+                    <button aria-label="Search"><Search size={19} /></button>
+                    <button aria-label="Wishlist" onClick={() => navigate("/wishlist")}><Heart size={19} /></button>
+                    <button aria-label="Bag" onClick={() => navigate("/cart")}>
+                        <ShoppingBag size={19} />
+                        <span className="dot" />
+                    </button>
+                </div>
+            </div>
+
+            {/* MOBILE SORT / FILTER ROW */}
+            <div className="ng-m-sortfilter">
+                <button
+                    className={mobileSortOpen ? "active" : ""}
+                    onClick={() => setMobileSortOpen((v) => !v)}
+                >
+                    <ArrowUpDown size={14} /> Sort
+                </button>
+                <button
+                    className={filtersOpen ? "active" : ""}
+                    onClick={() => setFiltersOpen((v) => !v)}
+                >
+                    {filtersOpen ? <X size={14} /> : <SlidersHorizontal size={14} />} Filter
+                </button>
+            </div>
+
+            {/* MOBILE SORT SHEET */}
+            <div className={`ng-m-sort-sheet ${mobileSortOpen ? "open" : ""}`}>
+                {SORT_CHIPS.map((s) => (
+                    <div
+                        key={s.value}
+                        className={`ng-m-sort-option ${filters.sort === s.value ? "active" : ""}`}
+                        onClick={() => {
+                            update("sort", s.value);
+                            setMobileSortOpen(false);
+                        }}
+                    >
+                        {s.label}
+                    </div>
+                ))}
+            </div>
+
+            {/* MOBILE COLLECTION CHIPS */}
+            <div className="ng-m-chips">
+                {COLLECTION_CHIPS.map((c) => (
+                    <div
+                        key={c.value || "all"}
+                        className={`ng-m-chip ${filters.collection === c.value ? "active" : ""}`}
+                        onClick={() => update("collection", c.value)}
+                    >
+                        {c.label}
+                    </div>
+                ))}
+            </div>
+
+            <section className="section-tight ng-desktop-title">
 
                 <div className="container">
 

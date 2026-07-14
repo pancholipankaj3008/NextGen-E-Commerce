@@ -74,6 +74,7 @@ export function ProductDetails() {
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
   const [activeImage, setActiveImage] = useState(0);
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
 
   const [review, setReview] = useState({ rating: 5, comment: "" });
 
@@ -323,41 +324,369 @@ const HandleRelatedCart = (item) => {
     }
   };
 
+  const HandlePrevImage = () => {
+    if (!images.length) return;
+    setActiveImage((i) => (i - 1 + images.length) % images.length);
+  };
+
+  const HandleNextImage = () => {
+    if (!images.length) return;
+    setActiveImage((i) => (i + 1) % images.length);
+  };
+
+  const HandleQtyDec = () => setQty((q) => Math.max(1, q - 1));
+  const HandleQtyInc = () => setQty((q) => Math.min(maxStock || 1, q + 1));
+
   if (productLoading) return <div className="page"><div className="container section">Loading...</div></div>;
   if (!product) return <EmptyState title="Product unavailable" />;
 
   const currentImage = images[activeImage]?.url || images[activeImage] || "";
+  const canAddToCart = selectedColor && selectedSize && maxStock > 0;
 
   return (
-    <main className="page">
+    <main className="page pd-page">
+      <style>{`
+        .pd-page { --pd-ink: var(--ink, #201d19); --pd-line: var(--line, #e6e2da); --pd-soft: #6b655c; padding-bottom: 0; }
+        .pd-page * { box-sizing: border-box; }
+
+        .pd-top-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
+          gap: 48px;
+        }
+
+        .pd-gallery {
+          display: grid;
+          grid-template-columns: 82px minmax(0, 1fr);
+          gap: 14px;
+        }
+        .pd-thumb-col {
+          display: grid;
+          gap: 10px;
+          align-content: start;
+          max-height: 620px;
+          overflow-y: auto;
+        }
+        .pd-thumb-btn {
+          border: 1px solid var(--pd-line);
+          border-radius: 8px;
+          overflow: hidden;
+          padding: 0;
+          background: none;
+        }
+        .pd-thumb-btn.active { border: 2px solid var(--pd-ink); }
+        .pd-thumb-btn img { width: 100%; height: 100%; object-fit: cover; display: block; aspect-ratio: 1/1; }
+
+        .pd-main-image {
+          max-height: 620px;
+          position: relative;
+          border-radius: 10px;
+          overflow: hidden;
+        }
+        .pd-main-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .pd-nav-arrow {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          border: none;
+          background: rgba(255,255,255,0.9);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+          cursor: pointer;
+          z-index: 2;
+        }
+        .pd-nav-arrow.left { left: 12px; }
+        .pd-nav-arrow.right { right: 12px; }
+        .pd-image-counter {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          background: rgba(20,17,14,0.65);
+          color: #fff;
+          font-size: 11px;
+          letter-spacing: 0.04em;
+          padding: 4px 10px;
+          border-radius: 20px;
+          z-index: 2;
+        }
+        .pd-dots {
+          display: none;
+          justify-content: center;
+          gap: 7px;
+          margin-top: 12px;
+        }
+        .pd-dot {
+          width: 6px; height: 6px; border-radius: 50%;
+          background: var(--pd-line);
+          border: none;
+          padding: 0;
+        }
+        .pd-dot.active { background: var(--pd-ink); width: 16px; border-radius: 4px; }
+
+        .pd-info-sticky { position: sticky; top: 24px; }
+
+        .pd-verified-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 11.5px;
+          letter-spacing: 0.03em;
+          color: #3f7a4f;
+          background: #eaf4ec;
+          padding: 4px 10px;
+          border-radius: 20px;
+          margin-left: 10px;
+          vertical-align: middle;
+        }
+
+        .pd-discount-chip {
+          display: inline-flex;
+          align-items: center;
+          font-size: 12.5px;
+          font-weight: 600;
+          color: #b3543a;
+          background: #fbeee9;
+          padding: 4px 10px;
+          border-radius: 6px;
+        }
+
+        .pd-size-row-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .pd-size-guide-btn {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          background: none;
+          border: none;
+          font-size: 12px;
+          letter-spacing: 0.03em;
+          text-decoration: underline;
+          color: var(--pd-soft);
+          cursor: pointer;
+          padding: 0;
+        }
+        .pd-size-guide-card {
+          margin-top: 10px;
+          padding: 12px 14px;
+          border: 1px solid var(--pd-line);
+          border-radius: 8px;
+          font-size: 12.5px;
+          color: var(--pd-soft);
+          line-height: 1.6;
+          background: #faf8f4;
+        }
+
+        .pd-qty-row {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin-top: 22px;
+          flex-wrap: wrap;
+        }
+        .pd-qty-label { font-size: 13px; color: var(--pd-soft); }
+        .pd-qty-stepper {
+          display: flex;
+          align-items: center;
+          border: 1px solid var(--pd-line);
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        .pd-qty-stepper button {
+          width: 34px; height: 34px;
+          border: none;
+          background: #fff;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer;
+          color: var(--pd-ink);
+        }
+        .pd-qty-stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
+        .pd-qty-stepper span {
+          width: 38px;
+          text-align: center;
+          font-weight: 600;
+          font-size: 13.5px;
+        }
+        .pd-stock-warning {
+          font-size: 12px;
+          color: #b3543a;
+          font-weight: 600;
+        }
+
+        .pd-cta-row {
+          margin-top: 20px;
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 10px;
+        }
+
+        .pd-trust-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 16px;
+          margin-top: 28px;
+        }
+        .pd-trust-item {
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+          padding: 16px;
+          border: 1px solid var(--pd-line);
+          border-radius: 10px;
+        }
+
+        .pd-spec-row {
+          display: grid;
+          grid-template-columns: 150px 1fr;
+          gap: 14px;
+          padding: 13px 0;
+          border-bottom: 1px solid var(--pd-line);
+        }
+
+        .pd-mobile-cta-bar {
+          display: none;
+        }
+
+        @media (max-width: 900px) {
+          .pd-top-grid { grid-template-columns: 1fr; gap: 24px; }
+          .pd-gallery { grid-template-columns: 1fr; }
+          .pd-thumb-col { display: none; }
+          .pd-main-image { min-height: 420px; }
+          .pd-dots { display: flex; }
+          .pd-info-sticky { position: static; top: auto; }
+          .pd-trust-grid { grid-template-columns: 1fr; }
+        }
+          .pd-related-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:20px;
+}
+
+@media(max-width:992px){
+
+.pd-related-grid{
+
+grid-template-columns:repeat(3,1fr);
+
+}
+
+}
+
+@media(max-width:768px){
+
+.pd-related-grid{
+
+grid-template-columns:repeat(2,1fr);
+
+gap:12px;
+
+}
+
+}
+
+        @media (max-width: 640px) {
+          .pd-main-image { min-height: 340px; }
+          .pd-spec-row { grid-template-columns: 1fr; gap: 4px; padding: 12px 0; }
+          .pd-spec-row .product-meta {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.7;
+          }
+
+          .pd-page { padding-bottom: 84px; }
+          .pd-mobile-cta-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            z-index: 30;
+            background: #fff;
+            padding: 12px 16px;
+            border-top: 1px solid var(--pd-line);
+            box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+          }
+          .pd-mobile-cta-price { display: flex; flex-direction: column; line-height: 1.2; flex-shrink: 0; }
+          .pd-mobile-cta-price strong { font-size: 17px; }
+          .pd-mobile-cta-price span { font-size: 10.5px; color: var(--pd-soft); }
+          .pd-mobile-cta-bar .btn { flex: 1; }
+        }
+      `}</style>
+
       <section className="section">
-        <div className="container" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.1fr) minmax(360px, 0.9fr)", gap: 48 }}>
+        <div className="container pd-top-grid">
 
           {/* Image Gallery */}
-          <div style={{ display: "grid", gridTemplateColumns: "82px minmax(0, 1fr)", gap: 14 }}>
-            <div style={{ display: "grid", gap: 10 }}>
+          <div className="pd-gallery">
+            <div className="pd-thumb-col">
               {images.map((image, index) => (
-                <button key={index} onClick={() => setActiveImage(index)} style={{ border: activeImage === index ? "2px solid var(--ink)" : "1px solid var(--line)", borderRadius: 8, overflow: "hidden" }}>
-                  <img src={image?.url || image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <button
+                  key={index}
+                  onClick={() => setActiveImage(index)}
+                  className={`pd-thumb-btn ${activeImage === index ? "active" : ""}`}
+                >
+                  <img src={image?.url || image} alt="" />
                 </button>
               ))}
             </div>
 
-            <div className="card" style={{ minHeight: 620, position: "relative" }}>
-              {currentImage && <img src={currentImage} alt={product.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+            <div className="card pd-main-image">
+              {images.length > 1 && (
+                <span className="pd-image-counter">{activeImage + 1} / {images.length}</span>
+              )}
+              {images.length > 1 && (
+                <button className="pd-nav-arrow left" onClick={HandlePrevImage} aria-label="Previous image">
+                  <ChevronLeft size={18} />
+                </button>
+              )}
+              {currentImage && <img src={currentImage} alt={product.title} />}
+              {images.length > 1 && (
+                <button className="pd-nav-arrow right" onClick={HandleNextImage} aria-label="Next image">
+                  <ChevronRight size={18} />
+                </button>
+              )}
             </div>
           </div>
 
+          {images.length > 1 && (
+            <div className="pd-dots">
+              {images.map((_, index) => (
+                <button
+                  key={index}
+                  className={`pd-dot ${activeImage === index ? "active" : ""}`}
+                  onClick={() => setActiveImage(index)}
+                  aria-label={`Go to image ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
+
           {/* Product Info */}
-          <div style={{ position: "sticky", top: 24 }}>
+          <div className="pd-info-sticky">
             <span className="eyebrow">{product.collection || product.category}</span>
             <h1 className="title" style={{ marginTop: 10 }}>{product.title}</h1>
 
-            <p className="product-meta">By <strong>{product.brand || "NextGen"}</strong></p>
+            <p className="product-meta">
+              By <strong>{product.brand || "NextGen"}</strong>
+              <span className="pd-verified-chip"><BadgeCheck size={13} /> Verified Product</span>
+            </p>
 
-            <div style={{ display: "flex", alignItems: "baseline", gap: 12, margin: "16px 0" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "16px 0", flexWrap: "wrap" }}>
               <strong style={{ fontSize: 28 }}>{money(sellingPrice)}</strong>
-              {discountPercent > 0 && <span style={{ textDecoration: "line-through", opacity: 0.55 }}>{money(originalPrice)}</span>}
+              {discountPercent > 0 && (
+                <>
+                  <span style={{ textDecoration: "line-through", opacity: 0.55 }}>{money(originalPrice)}</span>
+                  <span className="pd-discount-chip">{discountPercent}% OFF</span>
+                </>
+              )}
             </div>
 
             {/* Color */}
@@ -366,9 +695,10 @@ const HandleRelatedCart = (item) => {
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
                 {(product.variants || []).map((variant) => (
                   <button
+                  style={{padding: "6px 12px" , border:0, borderRadius: 6, cursor:"pointer"}}
                     key={variant.color}
                     onClick={() => HandleColorChange(variant.color)}
-                    className={selectedColor === variant.color ? "btn-primary" : "btn-soft"}
+                    className={ selectedColor === variant.color ? "btn-primary" : "btn-soft"}
                   >
                     {variant.color}
                   </button>
@@ -378,10 +708,16 @@ const HandleRelatedCart = (item) => {
 
             {/* Size */}
             <div className="field" style={{ marginTop: 18 }}>
-              <label>Size: <strong>{selectedSize}</strong></label>
+              <div className="pd-size-row-head">
+                <label>Size: <strong>{selectedSize}</strong></label>
+                <button className="pd-size-guide-btn" type="button" onClick={() => setShowSizeGuide((v) => !v)}>
+                  <Ruler size={13} /> Size Guide
+                </button>
+              </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
                 {(selectedVariant?.sizes || []).map((item) => (
                   <button
+                  style={{padding: "6px 12px" , border:0, borderRadius: 6, cursor:"pointer"}}
                     key={item.size}
                     onClick={() => setSelectedSize(item.size)}
                     disabled={Number(item.stock) < 1}
@@ -391,98 +727,73 @@ const HandleRelatedCart = (item) => {
                   </button>
                 ))}
               </div>
+              {showSizeGuide && (
+                <div className="pd-size-guide-card">
+                  True to size for most fits. If you're between two sizes, we recommend sizing up for a
+                  relaxed fit or sizing down for a snug fit. Check the fabric and fit details above for guidance.
+                </div>
+              )}
             </div>
 
-            {/* Quantity & Buttons */}
-            <div style={{ marginTop: 24, display: "grid", gridTemplateColumns: "1fr auto", gap: 10 }}>
-              <button className="btn btn-primary" onClick={HandleAddToCart} disabled={!selectedColor || !selectedSize || maxStock < 1}>
+            {/* Quantity */}
+            <div className="pd-qty-row">
+              <span className="pd-qty-label">Quantity</span>
+              <div className="pd-qty-stepper">
+                <button  onClick={HandleQtyDec} disabled={qty <= 1} aria-label="Decrease quantity">
+                  <Minus size={14} />
+                </button>
+                <span>{qty}</span>
+                <button onClick={HandleQtyInc} disabled={!maxStock || qty >= maxStock} aria-label="Increase quantity">
+                  <Plus size={14} />
+                </button>
+              </div>
+              {maxStock > 0 && maxStock <= 5 && (
+                <span className="pd-stock-warning">Only {maxStock} left</span>
+              )}
+              {maxStock < 1 && selectedSize && (
+                <span className="pd-stock-warning">Out of stock</span>
+              )}
+            </div>
+
+            {/* Buttons */}
+            <div className="pd-cta-row">
+              <button className="btn btn-primary" onClick={HandleAddToCart} disabled={!canAddToCart}>
                 <ShoppingBag size={17} /> Add To Cart
               </button>
               <button className="btn btn-secondary" onClick={HandleWishlist}>
                 <Heart fill={isCurrentWishlisted ? "currentColor" : "none"} />
               </button>
             </div>
+
+            {/* Trust badges */}
+            <div className="pd-trust-grid">
+              <div className="pd-trust-item">
+                <Truck size={19} />
+                <div>
+                  <strong>Fast Delivery</strong>
+                  <div className="product-meta">Free shipping above ₹999</div>
+                </div>
+              </div>
+
+              <div className="pd-trust-item">
+                <RotateCcw size={19} />
+                <div>
+                  <strong>Easy Returns</strong>
+                  <div className="product-meta">{product.returnPolicy || "7 Days Easy Return"}</div>
+                </div>
+              </div>
+
+              <div className="pd-trust-item">
+                <ShieldCheck size={19} />
+                <div>
+                  <strong>Secure Purchase</strong>
+                  <div className="product-meta">Secure checkout, verified products</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
-      {/* SERVICE FEATURES */}
-
-      <div
-        style={{
-          display: "grid",
-          gap: 12,
-          marginTop: 24,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            alignItems: "center",
-          }}
-        >
-          <Truck size={19} />
-
-          <div>
-            <strong>
-              Fast Delivery
-            </strong>
-
-            <div className="product-meta">
-              Free shipping on orders above
-              ₹999
-            </div>
-          </div>
-        </div>
-
-
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            alignItems: "center",
-          }}
-        >
-          <RotateCcw size={19} />
-
-          <div>
-            <strong>
-              Easy Returns
-            </strong>
-
-            <div className="product-meta">
-              {product.returnPolicy ||
-                "7 Days Easy Return"}
-            </div>
-          </div>
-        </div>
-
-
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            alignItems: "center",
-          }}
-        >
-          <ShieldCheck size={19} />
-
-          <div>
-            <strong>
-              Secure Purchase
-            </strong>
-
-            <div className="product-meta">
-              Secure checkout and verified
-              products
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* </div> */}
-      {/* </div> */}
-      {/* </section> */}
 
 
       {/* =================================
@@ -607,15 +918,7 @@ const HandleRelatedCart = (item) => {
                 .map(([label, value]) => (
                   <div
                     key={label}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "150px 1fr",
-                      gap: 14,
-                      padding: "13px 0",
-                      borderBottom:
-                        "1px solid var(--line)",
-                    }}
+                    className="pd-spec-row"
                   >
                     <span className="product-meta">
                       {label}
@@ -1301,8 +1604,8 @@ const HandleRelatedCart = (item) => {
             </h2>
 
 
-            <div className="grid grid-4">
-              {relatedProducts
+<div className="pd-related-grid">
+                {relatedProducts
                 .slice(0, 4)
                 .map((item) => (
                   <ProductCard
@@ -1328,6 +1631,20 @@ const HandleRelatedCart = (item) => {
           </div>
         </section>
       )}
+
+      {/* MOBILE STICKY ADD-TO-CART BAR */}
+      <div className="pd-mobile-cta-bar">
+        <div className="pd-mobile-cta-price">
+          <strong>{money(sellingPrice)}</strong>
+          {discountPercent > 0 && <span>{discountPercent}% OFF</span>}
+        </div>
+        <button className="btn btn-primary" onClick={HandleAddToCart} disabled={!canAddToCart}>
+          <ShoppingBag size={16} /> Add To Cart
+        </button>
+        <button className="btn btn-secondary" onClick={HandleWishlist} aria-label="Wishlist">
+          <Heart fill={isCurrentWishlisted ? "currentColor" : "none"} size={18} />
+        </button>
+      </div>
 
     </main>
   );

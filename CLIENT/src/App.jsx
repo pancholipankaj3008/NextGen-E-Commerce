@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar";
@@ -17,6 +17,7 @@ import { Home } from "./pages/Home";
 import { NotFound } from "./pages/NotFound";
 import { OrderDetails } from "./pages/OrderDetails";
 import { Orders } from "./pages/Orders";
+import { Returns } from "./pages/Returns";
 import { PaymentStatus } from "./pages/PaymentStatus";
 import { ProductDetails } from "./pages/ProductDetails";
 import { Products } from "./pages/Products";
@@ -41,6 +42,16 @@ function Shell({ children }) {
   );
 }
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [pathname]);
+
+  return null;
+}
+
 export default function App() {
   const dispatch = useAppDispatch();
 
@@ -54,7 +65,9 @@ export default function App() {
   }, [dispatch]);
 
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       <Route path="/" element={<Shell><Home /></Shell>} />
       <Route path="/products" element={<Shell><Products /></Shell>} />
       <Route path="/mens" element={<Shell><Products gender="men" /></Shell>} />
@@ -72,12 +85,14 @@ export default function App() {
         <Route path="/checkout" element={<Shell><Checkout /></Shell>} />
         <Route path="/orders" element={<Shell><Orders /></Shell>} />
         <Route path="/orders/:id" element={<Shell><OrderDetails /></Shell>} />
+        <Route path="/returns" element={<Shell><Returns /></Shell>} />
         <Route path="/payment/:status" element={<Shell><PaymentStatus /></Shell>} />
       </Route>
       <Route element={<ProtectedRoute roles={["admin", "product manager", "inventory staff", "order manager"]} />}>
         <Route path="/admin/*" element={<Shell><AdminDashboard /></Shell>} />
       </Route>
       <Route path="*" element={<Shell><NotFound /></Shell>} />
-    </Routes>
+      </Routes>
+    </>
   );
 }

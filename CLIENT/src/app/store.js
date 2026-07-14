@@ -9,6 +9,7 @@ import cartReducer from "../features/cart/cartSlice";
 import reviewReducer from "../features/review/reviewSlice";
 import couponReducer from "../features/coupon/couponSlice";
 import newsletterReducer from "../features/newsletter/newsletterSlice";
+import returnReducer from "../features/return/returnSlice";
 import orderReducer from "../features/order/orderSlice";
 import analyticsReducer from "../features/analytics/analyticsSlice";
 import adminReducer from "../features/admin/adminSlice";
@@ -29,6 +30,7 @@ export const store = configureStore({
         review: reviewReducer,
         coupon: couponReducer,
         newsletter: newsletterReducer,
+        returns: returnReducer,
         order: orderReducer,
         analytics: analyticsReducer,
         admin: adminReducer,

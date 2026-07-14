@@ -5,15 +5,23 @@ const returnSchema = new mongoose.Schema({
 
   order: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Order"
+    ref: "Order",
+    required: true,
+    unique: true
   },
 
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User"
+    ref: "User",
+    required: true
   },
 
-  reason: String,
+  reason: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 1000
+  },
 
   status: {
     type: String,

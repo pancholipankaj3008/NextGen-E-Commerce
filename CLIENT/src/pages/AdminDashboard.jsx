@@ -30,6 +30,7 @@ import {
   GetAllProducts as fetchAllProducts,
 } from "../features/product/productThunk";
 import { useAppDispatch, useAppSelector } from "../hooks/reduxHooks";
+import { GetReturns, UpdateReturn } from "../features/return/returnThunk";
 
 // AdminDashboard.jsx ke top pe ye import rakho
 import AdminProductForm, {
@@ -39,10 +40,10 @@ import AdminProductForm, {
 } from "../components/admin/AdminProductForm";   // ← Updated path
 
 const roleTabs = {
-  admin: ["dashboard", "products", "users", "coupons", "newsletter", "analytics", "orders"],
+  admin: ["dashboard", "products", "users", "coupons", "newsletter", "analytics", "orders", "returns"],
   "product manager": ["dashboard", "products"],
   "inventory staff": ["dashboard", "products", "analytics"],
-  "order manager": ["dashboard", "orders"],
+  "order manager": ["dashboard", "orders", "returns"],
 };
 
 const emptyCoupon = { code: "", discountType: "percent", discountValue: "", minOrderAmount: 0, expireAt: "", active: true };
@@ -70,6 +71,7 @@ const tabMetaAll = [
   ["newsletter", "Newsletter", Mail],
   ["analytics", "Analytics", BarChart3],
   ["orders", "Orders", Package],
+  ["returns", "Returns", Package],
 ];
 
 function statusFor(item) {
@@ -175,6 +177,7 @@ export function AdminDashboard() {
   const adminState = useAppSelector((state) => state.admin);
   const productState = useAppSelector((state) => state.product);
   const newsletterState = useAppSelector((state) => state.newsletter);
+  const returnState = useAppSelector((state) => state.returns);
   const authUser = useAppSelector((state) => state.auth?.user);
 
   const admin = {
@@ -194,6 +197,7 @@ export function AdminDashboard() {
   const subscribers = Array.isArray(newsletterState?.subscribers)
     ? newsletterState.subscribers
     : EMPTY_ARRAY;
+  const returns = Array.isArray(returnState?.all) ? returnState.all : EMPTY_ARRAY;
 
   const role = authUser?.role || "user";
   const tabs = roleTabs[role] || [];
@@ -207,7 +211,8 @@ export function AdminDashboard() {
     if (tabs.includes("products")) dispatch(fetchAllProducts({ limit: 50 }));
     if (tabs.includes("newsletter")) dispatch(GetAllSubscribers());
     if (tabs.includes("orders")) dispatch(fetchAdminOrders());
-  }, [dispatch, role, tabs]);
+    if (tabs.includes("returns")) dispatch(GetReturns());
+  }, [dispatch, role]);
 
   useEffect(() => {
     if (!tabs.includes(tab)) setTab(tabs[0] || "dashboard");
@@ -268,10 +273,10 @@ export function AdminDashboard() {
   const submitProduct = (event) => {
     event.preventDefault();
     const formData = buildProductForm(productForm, variantFiles);
-    const action = editingId 
-      ? updateProduct({ id: editingId, formData }) 
+    const action = editingId
+      ? updateProduct({ id: editingId, formData })
       : createProduct(formData);
-    
+
     dispatch(action).then(() => {
       dispatch(fetchAllProducts({ limit: 50 }));
       setEditingId(null);
@@ -279,6 +284,66 @@ export function AdminDashboard() {
       setVariantFiles({});
       setShowProductForm(false);
     });
+  };
+
+  const submitUser = async (event) => {
+
+    event.preventDefault();
+
+    const action = editingUserId
+
+      ? updateAdminUser({
+        id: editingUserId,
+        data: userForm,
+      })
+
+      : createAdminUser(userForm);
+
+    const result = await dispatch(action);
+
+    if (
+      createAdminUser.fulfilled.match(result) ||
+      updateAdminUser.fulfilled.match(result)
+    ) {
+
+      dispatch(fetchAdminUsers());
+
+      setEditingUserId(null);
+
+      setUserForm(emptyUserForm);
+
+    }
+
+  };
+
+  const submitCoupon = async (event) => {
+
+    event.preventDefault();
+
+    const action = editingCouponId
+
+      ? updateCoupon({
+        id: editingCouponId,
+        data: couponForm,
+      })
+
+      : createCoupon(couponForm);
+
+    const result = await dispatch(action);
+
+    if (
+      createCoupon.fulfilled.match(result) ||
+      updateCoupon.fulfilled.match(result)
+    ) {
+
+      dispatch(fetchCoupons());
+
+      setEditingCouponId(null);
+
+      setCouponForm(emptyCoupon);
+
+    }
+
   };
 
   const startEditProduct = (product) => {
@@ -312,13 +377,13 @@ export function AdminDashboard() {
             <td><Pill tone={user.isBlocked ? "rose" : "olive"}>{user.isBlocked ? "Blocked" : "Active"}</Pill></td>
             <td>
               <div className="ng-actions">
-                <button className="ng-btn" onClick={() => { 
-                  setEditingUserId(user._id); 
-                  setUserForm({ name: user.name || "", email: user.email || "", phone: user.phone || "", role: user.role || "user", password: "" }); 
+                <button className="ng-btn" onClick={() => {
+                  setEditingUserId(user._id);
+                  setUserForm({ name: user.name || "", email: user.email || "", phone: user.phone || "", role: user.role || "user", password: "" });
                 }}>
                   <Edit size={13} /> Edit
                 </button>
-                {protectedAdmin ? <Pill tone="gold">Protected</Pill> : 
+                {protectedAdmin ? <Pill tone="gold">Protected</Pill> :
                   <button className="ng-btn" onClick={() => dispatch(user.isBlocked ? unblockAdminUser(user._id) : blockAdminUser(user._id)).then(() => dispatch(fetchAdminUsers()))}>
                     {user.isBlocked ? "Unblock" : "Block"}
                   </button>}
@@ -352,6 +417,7 @@ export function AdminDashboard() {
         .ng-search input{ border:none; outline:none; background:none; font-size:14px; width:100%; font-family:"DM Sans", sans-serif; color:var(--ng-ink); }
         .ng-role-chip{ font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ng-olive); background:var(--ng-olive-soft); padding:6px 12px; border-radius:999px; }
         .ng-mobile-tabs{ display:none; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:18px; }
+        .ng-mobile-tabs button{ white-space:nowrap; flex-shrink:0; }
         .ng-heading{ display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:22px; }
         .ng-heading h1{ font-size:32px; text-transform:capitalize; margin:0; }
         .ng-heading p{ margin:2px 0 0; color:var(--ng-muted); font-size:13px; }
@@ -449,6 +515,14 @@ export function AdminDashboard() {
           </div>
         </div>
 
+        <nav className="ng-mobile-tabs" aria-label="Admin sections">
+          {tabMeta.map(([key, label, Icon]) => (
+            <button key={key} className={`ng-nav-item ${tab === key ? "active" : ""}`} onClick={() => setTab(key)}>
+              <Icon size={15} /> {label}
+            </button>
+          ))}
+        </nav>
+
         {tab === "dashboard" && ((
           <>
             <div className="ng-hero">
@@ -505,7 +579,7 @@ export function AdminDashboard() {
                 variantFiles={variantFiles}
                 setVariantFiles={setVariantFiles}
                 editingId={editingId}
-                loading={false} // You can connect real loading state if needed
+                loading={admin.loading} // You can connect real loading state if needed
                 onSubmit={submitProduct}
                 onClose={closeProductForm}
               />
@@ -513,52 +587,69 @@ export function AdminDashboard() {
 
             {/* Products Table (unchanged) */}
             <div className="ng-table-card">
-                          <table className="ng-table">
-                            <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Action</th></tr></thead>
-                            <tbody>
-                              {pagedProducts.map((item) => {
-                                const status = statusFor(item);
-                                const imageSrc = typeof item.image === "string" ? item.image : item.image?.url || item.images?.[0]?.url || item.images?.[0] || "";
-                                return (
-                                  <tr key={item._id}>
-                                    <td>
-                                      <div className="ng-row-title">
-                                        {imageSrc ? <img className="ng-product-thumb" src={imageSrc} alt={item.name || item.title || "Product"} /> : <div className="ng-product-thumb-empty"><Package size={18} /></div>}
-                                        {item.name || item.title}
-                                      </div>
-                                    </td>
-                                    <td>{item.category || "-"}</td>
-                                    <td>₹{item.finalPrice || item.price}</td>
-                                    <td>{item.totalStock || 0} pcs</td>
-                                    <td><Pill tone={status.tone}>{status.label}</Pill></td>
-                                    <td>
-                                      <div className="ng-actions">
-                                        {canManageProducts && <button className="ng-btn" onClick={() => startEditProduct(item)}><Edit size={13} /> Edit</button>}
-                                        {canManageProducts && <button className="ng-btn ng-btn-danger" onClick={() => dispatch(deleteProduct(item._id)).then(() => dispatch(fetchAllProducts({ limit: 50 })))}><Trash2 size={13} /></button>}
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                              {pagedProducts.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--ng-muted)", padding: 30 }}>No products found.</td></tr>}
-                            </tbody>
-                          </table>
-                          <div className="ng-foot">
-                            <span>Showing {pagedProducts.length} of {filteredProducts.length}</span>
-                            <div className="ng-page-btns">
-                              <button className="ng-page-num" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>‹</button>
-                              {Array.from({ length: totalPages }).slice(0, 5).map((_, idx) => (
-                                <button key={idx} className={`ng-page-num ${page === idx + 1 ? "active" : ""}`} onClick={() => setPage(idx + 1)}>{String(idx + 1).padStart(2, "0")}</button>
-                              ))}
-                              <button className="ng-page-num" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>›</button>
-                            </div>
+              <table className="ng-table">
+                <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody>
+                  {pagedProducts.map((item) => {
+                    const status = statusFor(item);
+                    const imageSrc = typeof item.image === "string" ? item.image : item.image?.url || item.images?.[0]?.url || item.images?.[0] || "";
+                    return (
+                      <tr key={item._id}>
+                        <td>
+                          <div className="ng-row-title">
+                            {imageSrc ? <img className="ng-product-thumb" src={imageSrc} alt={item.name || item.title || "Product"} /> : <div className="ng-product-thumb-empty"><Package size={18} /></div>}
+                            {item.name || item.title}
                           </div>
-                        </div>
+                        </td>
+                        <td>{item.category || "-"}</td>
+                        <td>₹{item.finalPrice || item.price}</td>
+                        <td>{item.totalStock || 0} pcs</td>
+                        <td><Pill tone={status.tone}>{status.label}</Pill></td>
+                        <td>
+                          <div className="ng-actions">
+                            {canManageProducts && <button className="ng-btn" onClick={() => startEditProduct(item)}><Edit size={13} /> Edit</button>}
+                            {canManageProducts && <button className="ng-btn ng-btn-danger" onClick={async () => {
 
-                        
+                              if (!window.confirm("Delete this product?"))
+                                return;
+
+                              const result = await dispatch(
+                                deleteProduct(item._id)
+                              );
+
+                              if (deleteProduct.fulfilled.match(result)) {
+
+                                dispatch(fetchAllProducts({
+                                  limit: 50
+                                }));
+
+                              }
+
+                            }}><Trash2 size={13} /></button>}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {pagedProducts.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--ng-muted)", padding: 30 }}>No products found.</td></tr>}
+                </tbody>
+              </table>
+              <div className="ng-foot">
+                <span>Showing {pagedProducts.length} of {filteredProducts.length}</span>
+                <div className="ng-page-btns">
+                  <button className="ng-page-num" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>‹</button>
+                  {Array.from({ length: totalPages }).slice(0, 5).map((_, idx) => (
+                    <button key={idx} className={`ng-page-num ${page === idx + 1 ? "active" : ""}`} onClick={() => setPage(idx + 1)}>{String(idx + 1).padStart(2, "0")}</button>
+                  ))}
+                  <button className="ng-page-num" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>›</button>
+                </div>
+              </div>
+            </div>
+
+
           </>
         )}
-{tab === "users" && (
+        {tab === "users" && (
           <>
             <form className="ng-panel" onSubmit={submitUser}>
               <span className="ng-eyebrow">{editingUserId ? "Update User" : "Create User"}</span>
@@ -710,6 +801,25 @@ export function AdminDashboard() {
                 ))}
                 {admin.orders.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--ng-muted)", padding: 30 }}>No orders found.</td></tr>}
               </tbody>
+            </table>
+          </div>
+        )}
+
+        {tab === "returns" && (
+          <div className="ng-table-card">
+            <div className="ng-section-title"><h2>Return Requests</h2><Pill tone="gold">{returns.length} total</Pill></div>
+            <table className="ng-table">
+              <thead><tr><th>Order</th><th>Customer</th><th>Reason</th><th>Requested</th><th>Status</th><th>Manage</th></tr></thead>
+              <tbody>{returns.map((request) => (
+                <tr key={request._id}>
+                  <td>{request.order?.orderNumber || request.order?._id || "-"}</td>
+                  <td>{request.user?.name || request.user?.email || "-"}</td>
+                  <td>{request.reason || "No reason provided"}</td>
+                  <td>{request.createdAt ? new Date(request.createdAt).toLocaleDateString() : "-"}</td>
+                  <td><Pill tone={request.status === "rejected" ? "rose" : request.status === "pending" ? "gold" : "olive"}>{request.status}</Pill></td>
+                  <td><select className="ng-select" value={request.status} onChange={(event) => dispatch(UpdateReturn({ id: request._id, status: event.target.value })).then(() => dispatch(GetReturns()))}>{["pending", "approved", "rejected", "picked"].map((status) => <option key={status} value={status}>{status}</option>)}</select></td>
+                </tr>
+              ))}{returns.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--ng-muted)", padding: 30 }}>No return requests found.</td></tr>}</tbody>
             </table>
           </div>
         )}

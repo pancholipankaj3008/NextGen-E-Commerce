@@ -13,6 +13,7 @@ const ReviewRouter = require("./Routes/ReviewRoutes");
 const NewsletterRouter = require("./Routes/NewsletterRoutes");
 const CouponRouter = require("./Routes/CouponRoutes");
 const OrderRouter = require("./Routes/OrderRoutes");
+const ReturnRouter = require("./Routes/ReturnRoutes");
 
 
 let app = express();
@@ -39,6 +40,7 @@ app.use("/api/review", ReviewRouter);
 app.use("/api/newsletter", NewsletterRouter);
 app.use("/api/coupon", CouponRouter);
 app.use("/api/order", OrderRouter);
+app.use("/api/returns", ReturnRouter);
 
 app.listen(Port, ()=>{
     console.log('Server is Runnig on port '+ Port);

@@ -34,13 +34,14 @@ const {
 
 } = require("../Controllers/UserController");
 
-const { Auth } = require("../Middlewares/Auth");
+const { Auth, RefreshAccessToken } = require("../Middlewares/Auth");
 
 const UserRouter = express.Router();
 
 // AUTH ROUTES
 UserRouter.post("/signup", SignUp);
 UserRouter.post("/login", Login);
+UserRouter.post("/refresh", RefreshAccessToken);
 UserRouter.post("/logout", Auth("user", "admin", "product manager", "order manager", "inventory staff" ), Logout);
 // UserRouter.post("/forgot-password", ForgotPassword);
 // UserRouter.post("/reset-password/:resetToken",ResetPassword);
