@@ -294,9 +294,9 @@ GitHub:
 https://github.com/pancholipankaj3008
 
 LinkedIn:
-(https://www.linkedin.com/in/pankaj-dev3008/)
+https://www.linkedin.com/in/pankaj-dev3008/
 
 Portfolio:
-(https://pankajpancholi-portfolio.vercel.app/)
+https://pankajpancholi-portfolio.vercel.app/
 
 ---
