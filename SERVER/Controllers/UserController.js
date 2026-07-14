@@ -163,7 +163,7 @@
 
         // Mail
         await transporter.sendMail({
-            from: process.env.EMAIL_USER,
+            from: `NextGen <${process.env.EMAIL_USER}>`,
             to: user.email,
             subject: "Reset Your Password",
             html: `
