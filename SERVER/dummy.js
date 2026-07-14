@@ -4,7 +4,7 @@
 
 const Product = require("../Models/Product");
 
-const cloudinary = require("../config/cloudinaryConfig");
+const cloudinary = require("../Config/cloudinaryConfig");
 
 const streamifier = require("streamifier");
 
