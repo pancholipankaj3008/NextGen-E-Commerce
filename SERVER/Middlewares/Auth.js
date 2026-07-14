@@ -1,9 +1,12 @@
 let jwt = require("jsonwebtoken");
+const { trusted } = require("mongoose");
 
 const cookieOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    secure: trusted,
+    sameSite: "None",
+    // secure: false,
+    // sameSite: "Lax"
 };
 
 function issueAccessToken(res, decoded) {

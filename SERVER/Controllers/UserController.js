@@ -65,8 +65,10 @@
 
                 const cookieOptions = {
                     httpOnly: true,
-                    secure: process.env.NODE_ENV === "production",
-                    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+                    secure: true,
+                    sameSite: "None",
+                    // secure: false,
+                    // sameSite: "Lax"
                 };
 
                 res.cookie("accessToken", accessToken, {
@@ -103,8 +105,10 @@
 
             const cookieOptions = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        secure: true,
+        sameSite: "None",
+        // secure: false,
+        // sameSite: "Lax"
     };
 
     res.clearCookie("accessToken", cookieOptions);
