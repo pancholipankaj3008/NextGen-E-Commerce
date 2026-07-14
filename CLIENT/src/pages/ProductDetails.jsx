@@ -92,149 +92,149 @@ export function ProductDetails() {
   const reviewState = useAppSelector((state) => state.review || {});
   const reviews = Array.isArray(reviewState.reviews) ? reviewState.reviews : [];
 
-  
+
   const actionLoading =
-  reviewState.loading || false;
+    reviewState.loading || false;
 
   const averageRating = useMemo(() => {
 
-  if (!reviews.length) return 0;
+    if (!reviews.length) return 0;
 
-  return (
-    reviews.reduce(
-      (sum, item) =>
-        sum + Number(item.rating || 0),
-      0
-    ) / reviews.length
-  );
+    return (
+      reviews.reduce(
+        (sum, item) =>
+          sum + Number(item.rating || 0),
+        0
+      ) / reviews.length
+    );
 
-}, [reviews]);
+  }, [reviews]);
 
-const ratingDistribution = useMemo(() => {
+  const ratingDistribution = useMemo(() => {
 
-  const data = {
-    1: 0,
-    2: 0,
-    3: 0,
-    4: 0,
-    5: 0,
-  };
+    const data = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+    };
 
-  reviews.forEach((review) => {
+    reviews.forEach((review) => {
 
-    const rating = Number(review.rating);
+      const rating = Number(review.rating);
 
-    if (data[rating] !== undefined) {
+      if (data[rating] !== undefined) {
 
-      data[rating]++;
+        data[rating]++;
+
+      }
+
+    });
+
+    return data;
+
+  }, [reviews]);
+
+
+  const HandleReviewSubmit = async (e) => {
+
+    e.preventDefault();
+
+    if (!isAuthenticated) {
+
+      navigate("/auth");
+
+      return;
 
     }
 
-  });
+    await dispatch(
 
-  return data;
+      CreateReview({
 
-}, [reviews]);
+        productId: product._id,
 
+        rating: review.rating,
 
-const HandleReviewSubmit = async (e) => {
+        comment: review.comment,
 
-  e.preventDefault();
+      })
 
-  if (!isAuthenticated) {
+    );
 
-    navigate("/auth");
+    setReview({
 
-    return;
+      rating: 5,
 
-  }
+      comment: "",
 
-  await dispatch(
+    });
 
-    CreateReview({
+    dispatch(
 
-      productId: product._id,
+      GetProductReviews(product._id)
 
-      rating: review.rating,
+    );
 
-      comment: review.comment,
-
-    })
-
-  );
-
-  setReview({
-
-    rating: 5,
-
-    comment: "",
-
-  });
-
-  dispatch(
-
-    GetProductReviews(product._id)
-
-  );
-
-};
+  };
 
 
-const HandleDeleteReview = async (reviewId) => {
+  const HandleDeleteReview = async (reviewId) => {
 
-  await dispatch(
+    await dispatch(
 
-    DeleteReview(reviewId)
+      DeleteReview(reviewId)
 
-  );
+    );
 
-  dispatch(
+    dispatch(
 
-    GetProductReviews(product._id)
+      GetProductReviews(product._id)
 
-  );
+    );
 
-};
+  };
 
 
-const HandleRelatedCart = (item) => {
+  const HandleRelatedCart = (item) => {
 
-  if (!item?.variants?.length) {
+    if (!item?.variants?.length) {
 
-    return;
+      return;
 
-  }
+    }
 
-  const variant = item.variants[0];
+    const variant = item.variants[0];
 
-  const size =
-    variant.sizes?.find(
-      (s) => Number(s.stock) > 0
-    ) || variant.sizes?.[0];
+    const size =
+      variant.sizes?.find(
+        (s) => Number(s.stock) > 0
+      ) || variant.sizes?.[0];
 
-  if (!size) {
+    if (!size) {
 
-    return;
+      return;
 
-  }
+    }
 
-  dispatch(
+    dispatch(
 
-    AddToCart({
+      AddToCart({
 
-      productId: item._id,
+        productId: item._id,
 
-      color: variant.color,
+        color: variant.color,
 
-      size: size.size,
+        size: size.size,
 
-      quantity: 1,
+        quantity: 1,
 
-    })
+      })
 
-  );
+    );
 
-};
+  };
 
   // Selected Variant
   const selectedVariant = useMemo(() => {
@@ -679,6 +679,18 @@ gap:12px;
               <span className="pd-verified-chip"><BadgeCheck size={13} /> Verified Product</span>
             </p>
 
+            {reviews.length >= 0 && (
+  <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "10px 0 2px" }}>
+    <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#2f9e44", fontWeight: 700, fontSize: 13.5 }}>
+      <Star size={14} fill="#2f9e44" stroke="#2f9e44" />
+      {averageRating.toFixed(1)}
+    </span>
+    <span style={{ color: "var(--pd-soft)", fontSize: 12.5 }}>
+      | {reviews.length} {reviews.length === 1 ? "review" : "reviews"}
+    </span>
+  </div>
+)}
+
             <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "16px 0", flexWrap: "wrap" }}>
               <strong style={{ fontSize: 28 }}>{money(sellingPrice)}</strong>
               {discountPercent > 0 && (
@@ -692,13 +704,28 @@ gap:12px;
             {/* Color */}
             <div className="field" style={{ marginTop: 24 }}>
               <label>Color: <strong>{selectedColor}</strong></label>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+              <div style={{
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+                marginTop: 10,
+                alignItems: "center"
+              }}>
                 {(product.variants || []).map((variant) => (
                   <button
-                  style={{padding: "6px 12px" , border:0, borderRadius: 6, cursor:"pointer"}}
+                    style={{
+                      padding: "10px 18px",
+                      minWidth: 70,
+                      minHeight: 42,
+                      borderRadius: 8,
+                      border: "1px solid #ddd",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0
+                    }}
                     key={variant.color}
                     onClick={() => HandleColorChange(variant.color)}
-                    className={ selectedColor === variant.color ? "btn-primary" : "btn-soft"}
+                    className={selectedColor === variant.color ? "btn-primary" : "btn-soft"}
                   >
                     {variant.color}
                   </button>
@@ -717,7 +744,16 @@ gap:12px;
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
                 {(selectedVariant?.sizes || []).map((item) => (
                   <button
-                  style={{padding: "6px 12px" , border:0, borderRadius: 6, cursor:"pointer"}}
+                    style={{
+    padding: "10px 18px",
+    minWidth: 60,
+    minHeight: 42,
+    borderRadius: 8,
+    border: "1px solid #ddd",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    flexShrink: 0
+}}
                     key={item.size}
                     onClick={() => setSelectedSize(item.size)}
                     disabled={Number(item.stock) < 1}
@@ -739,7 +775,7 @@ gap:12px;
             <div className="pd-qty-row">
               <span className="pd-qty-label">Quantity</span>
               <div className="pd-qty-stepper">
-                <button  onClick={HandleQtyDec} disabled={qty <= 1} aria-label="Decrease quantity">
+                <button onClick={HandleQtyDec} disabled={qty <= 1} aria-label="Decrease quantity">
                   <Minus size={14} />
                 </button>
                 <span>{qty}</span>
@@ -1507,6 +1543,7 @@ gap:12px;
                           alignItems: "center",
                           gap: 8,
                           marginBottom: 8,
+                          flexWrap: "wrap"
                         }}
                       >
                         <strong>
@@ -1604,8 +1641,8 @@ gap:12px;
             </h2>
 
 
-<div className="pd-related-grid">
-                {relatedProducts
+            <div className="pd-related-grid">
+              {relatedProducts
                 .slice(0, 4)
                 .map((item) => (
                   <ProductCard

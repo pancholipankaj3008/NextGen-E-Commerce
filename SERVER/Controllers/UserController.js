@@ -162,7 +162,7 @@
             `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
 
         // Mail
-        await transporter.sendMail({
+        let info = await transporter.sendMail({
             from: `NextGen <${process.env.EMAIL_USER}>`,
             to: user.email,
             subject: "Reset Your Password",
@@ -180,6 +180,7 @@
                 <p>This link will expire in 15 minutes.</p>
             `
         });
+        console.log(info);
 
         res.json({
             success: true,

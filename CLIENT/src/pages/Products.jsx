@@ -577,12 +577,12 @@ const HandleAddToCart = async (product) => {
                     <span className="ng-m-topbar-title">{header}</span>
                 </div>
                 <div className="ng-m-topbar-icons">
-                    <button aria-label="Search"><Search size={19} /></button>
+                    {/* <button aria-label="Search"><Search size={19} /></button> */}
                     <button aria-label="Wishlist" onClick={() => navigate("/wishlist")}><Heart size={19} /></button>
-                    <button aria-label="Bag" onClick={() => navigate("/cart")}>
+                    {/* <button aria-label="Bag" onClick={() => navigate("/cart")}>
                         <ShoppingBag size={19} />
                         <span className="dot" />
-                    </button>
+                    </button> */}
                 </div>
             </div>
 

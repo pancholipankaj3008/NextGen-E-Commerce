@@ -23,6 +23,11 @@ import { ProductDetails } from "./pages/ProductDetails";
 import { Products } from "./pages/Products";
 import { ResetPassword } from "./pages/ResetPassword";
 import { Wishlist } from "./pages/Wishlist";
+import { About } from "./pages/About";
+import { DeliveryPolicy } from "./pages/DeliveryPolicy";
+import { PrivacyPolicy } from "./pages/PrivacyPolicy";
+import { TermsConditions } from "./pages/TermsConditions";
+import { RefundPolicy } from "./pages/RefundPolicy";
 
 function Shell({ children }) {
   const location = useLocation();
@@ -91,6 +96,12 @@ export default function App() {
       <Route element={<ProtectedRoute roles={["admin", "product manager", "inventory staff", "order manager"]} />}>
         <Route path="/admin/*" element={<Shell><AdminDashboard /></Shell>} />
       </Route>
+
+      <Route path="/about" element={<About />} />
+<Route path="/delivery-policy" element={<DeliveryPolicy/>} />
+<Route path="/privacy-policy" element={<PrivacyPolicy />} />
+<Route path="/refund-policy" element={<RefundPolicy />} />
+<Route path="/terms" element={<TermsConditions />} />
       <Route path="*" element={<Shell><NotFound /></Shell>} />
       </Routes>
     </>

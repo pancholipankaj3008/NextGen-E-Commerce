@@ -3,7 +3,8 @@
 
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Pagination, EffectFade, Navigation } from "swiper/modules";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import "swiper/css";
 import "swiper/css/pagination";
@@ -18,6 +19,7 @@ const slides = [
     subtitle: "Bold silhouettes for the unapologetically modern.",
     accent: "#E8C97E",
     cta: "Shop Women",
+    path: "/womens",
     tag: "NEW IN",
     position: "center 30%"
   },
@@ -28,6 +30,7 @@ const slides = [
     subtitle: "Understated refinement. Crafted to last.",
     accent: "#A8C5DA",
     cta: "Shop Men",
+    path: "/mens",
     tag: "TRENDING",
   },
   {
@@ -37,6 +40,7 @@ const slides = [
     subtitle: "Effortless looks for golden hour and beyond.",
     accent: "#F4A26A",
     cta: "Explore Drop",
+    path: "/products?sort=newest",
     tag: "JUST DROPPED",
     position: "center 45%"
     
@@ -48,6 +52,7 @@ const slides = [
     subtitle: "Statement pieces for women who lead.",
     accent: "#C9A4D4",
     cta: "View Lookbook",
+    path: "/products?sort=popularity",
     tag: "EDITOR'S PICK",
     position: "center 7%"
   },
@@ -56,6 +61,7 @@ const slides = [
 export default function HeroCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [animKey, setAnimKey] = useState(0);
+  const navigate = useNavigate();
 
   const handleSlideChange = (swiper) => {
     setActiveIndex(swiper.realIndex);
@@ -488,8 +494,8 @@ export default function HeroCarousel() {
 
                   {/* CTAs */}
                   <div className="slide-ctas">
-                    <button className="btn-primary">{slide.cta}</button>
-                    <button className="btn-secondary">View Lookbook →</button>
+                    <button className="btn-primary" onClick={() => navigate(slide.path)}>{slide.cta}</button>
+                    <button className="btn-secondary" onClick={() => navigate(slide.path)}>View collection →</button>
                   </div>
                 </div>
 

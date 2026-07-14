@@ -211,11 +211,7 @@ export default function ProductCard({
               fill={isWishlisted ? "currentColor" : "none"}
             />
           </button>
-
-
-        </div>
-
-        {rating > 0 && (
+{rating >= 0 && (
 
           <div
             style={{
@@ -247,6 +243,10 @@ export default function ProductCard({
           </div>
 
         )}
+
+        </div>
+
+        
 
       </Link>
 

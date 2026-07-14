@@ -1,7 +1,6 @@
 import HeroCarousel from "../components/Hero";
 import TopStrip from "../components/Strip";
 import CollectionGrid from "../components/CollectionGrid";
-import CollectionSection from "../components/CollectionSection";
 import CollectionShowcase from "../components/CollectionShowcase";
 import PromoNewsletter from "../components/PromoNewsletter";
 import ProductCard from "../components/ProductCard";
@@ -24,9 +23,9 @@ function BackendProductRails() {
   }, [dispatch]);
 
   const rails = [
-    ["Featured Products", featuredProducts],
-    ["Trending Products", trendingProducts],
-    ["New Arrivals", newArrivals],
+    ["Editor's Picks", featuredProducts],
+    ["Trending Now", trendingProducts],
+    ["Just Dropped", newArrivals],
   ];
 
   return (
@@ -56,7 +55,6 @@ export function Home() {
       <HeroCarousel />
       <TopStrip />
       <CollectionGrid />
-      <CollectionSection />
       <BackendProductRails />
       <CollectionShowcase />
       <PromoNewsletter />

@@ -1,5 +1,8 @@
 
+import { useNavigate } from "react-router-dom";
+
 export default function CollectionGrid() {
+  const navigate = useNavigate();
 
 
   return (
@@ -415,14 +418,14 @@ export default function CollectionGrid() {
             <span className="cg-eyebrow">Winter 2026 — New Arrivals</span>
             <h2 className="cg-heading">Curated <em>Collections</em></h2>
           </div>
-          <button className="cg-view-all">View All</button>
+          <button className="cg-view-all" onClick={() => navigate("/products")}>View All</button>
         </div>
 
         {/* Grid */}
         <div className="cg-grid">
 
           {/* TALL CARD 1 — Women */}
-          <div className="cg-card-tall">
+          <div className="cg-card-tall" onClick={() => navigate("/womens")}>
             <img
               src="https://i.pinimg.com/1200x/25/6c/e4/256ce46e8c6b514a6823686743cda72a.jpg"
               alt="Women's Collection"
@@ -441,7 +444,7 @@ export default function CollectionGrid() {
           </div>
 
           {/* TALL CARD 2 — Street */}
-          <div className="cg-card-tall">
+          <div className="cg-card-tall" onClick={() => navigate("/mens")}>
             <img
               src="https://i.pinimg.com/736x/69/89/3c/69893c49d48e98399fcdea8ac724e72f.jpg"
               alt="Men's Collection"
@@ -463,7 +466,7 @@ export default function CollectionGrid() {
           <div className="cg-right-col">
 
             {/* Banner 1 */}
-            <div className="cg-card-banner">
+            <div className="cg-card-banner" onClick={() => navigate("/products?gender=women&collection=Winter%20Drop")}>
               <div className="banner-top-strip" />
               <div className="banner-img-wrap">
                 <img
@@ -481,7 +484,7 @@ export default function CollectionGrid() {
             </div>
 
             {/* Banner 2 */}
-            <div className="cg-card-banner">
+            <div className="cg-card-banner" onClick={() => navigate("/products?gender=men&collection=Winter%20Drop")}>
               <div className="banner-top-strip" />
               <div className="banner-img-wrap">
                 <img

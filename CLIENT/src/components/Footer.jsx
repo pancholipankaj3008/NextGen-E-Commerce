@@ -1,9 +1,24 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { SubscribeNewsletter } from "../features/newsletter/newsletterThunk";
+import { useAppDispatch } from "../hooks/reduxHooks";
+
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const dispatch = useAppDispatch();
+  const [email, setEmail] = useState("");
+  const [newsletterMessage, setNewsletterMessage] = useState("");
 
   const links = {
-    Information: ["My Account", "Login", "My Order", "My Cart", "Checkout"],
-    Service: ["About Us", "Delivery Policy", "Privacy Policy", "Refund Policy", "Terms & Condition"],
+    Information: [["My Account", "/account"], ["Login", "/auth"], ["My Orders", "/orders"], ["My Cart", "/cart"], ["Checkout", "/checkout"]],
+    Service: [["About Us", "/about"], ["Delivery Policy", "/delivery-policy"], ["Privacy Policy", "/privacy-policy"], ["Refund Policy", "/refund-policy"], ["Terms & Conditions", "/terms"]],
+  };
+
+  const submitNewsletter = async (event) => {
+    event.preventDefault();
+    const result = await dispatch(SubscribeNewsletter(email.trim()));
+    setNewsletterMessage(result.payload?.message || "Unable to subscribe. Please try again.");
+    if (SubscribeNewsletter.fulfilled.match(result)) setEmail("");
   };
 
   const socials = [
@@ -383,14 +398,17 @@ export default function Footer() {
             </p>
             <div>
               <div className="ft-mini-form-label">Stay in the loop</div>
-              <div className="ft-mini-form">
+              <form className="ft-mini-form" onSubmit={submitNewsletter}>
                 <input
                   className="ft-mini-input"
                   type="email"
                   placeholder="Your email address"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
                 />
                 <button className="ft-mini-submit">→</button>
-              </div>
+              </form>
             </div>
           </div>
 
@@ -401,8 +419,8 @@ export default function Footer() {
               <div key={col}>
                 <div className="ft-col-title">{col}</div>
                 <ul className="ft-links">
-                  {items.map((item) => (
-                    <li key={item}><a href="#">{item}</a></li>
+                  {items.map(([label, to]) => (
+                    <li key={label}><Link to={to}>{label}</Link></li>
                   ))}
                 </ul>
               </div>
