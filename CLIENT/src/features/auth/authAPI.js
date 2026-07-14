@@ -54,16 +54,24 @@ export const ChangePasswordAPI = (passwordData) => {
 };
 
 
-export const ForgotPasswordAPI = () => {
+export const ForgotPasswordAPI = (email) => {
 
-    return unavailable("Forgot password route is not available in backend");
+    return API.post("/user/forgot-password", {
+        email
+    });
 
 };
 
+export const ResetPasswordAPI = (
+  resetToken,
+  password
+) => {
 
-
-export const ResetPasswordAPI = () => {
-
-    return unavailable("Reset password route is not available in backend");
+  return API.post(
+    `/user/reset-password/${resetToken}`,
+    {
+      password,
+    }
+  );
 
 };

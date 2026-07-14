@@ -22,7 +22,7 @@ let Port = process.env.PORT;
 app.use(express.json());
 
 app.use(cors({
-    origin:["https://nextgen-ecommerce-one.vercel.app"],
+    origin:["https://nextgen-ecommerce-one.vercel.app", "http://localhost:5173"],
     credentials:true
 }));
 app.use(cookieParser());

@@ -77,7 +77,7 @@ export default function App() {
       <Route path="/product/:slug" element={<Shell><ProductDetails /></Shell>} />
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password/:token" element={<ResetPassword />} />
+      <Route path="/reset-password/:resetToken" element={<ResetPassword />}/>
       <Route element={<ProtectedRoute />}>
         <Route path="/account" element={<Shell><Account /></Shell>} />
         <Route path="/wishlist" element={<Shell><Wishlist /></Shell>} />

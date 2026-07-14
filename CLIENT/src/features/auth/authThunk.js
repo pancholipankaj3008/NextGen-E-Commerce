@@ -130,24 +130,28 @@ export const ForgotPassword = createAsyncThunk("auth/forgotPassword", async (ema
 
 
 
-export const ResetPassword = createAsyncThunk("auth/resetPassword", async ({ resetToken, newPassword }, thunkAPI) => {
+export const ResetPassword = createAsyncThunk(
+  "auth/resetPassword",
+  async ({ resetToken, password }, thunkAPI) => {
+    try {
 
-        try {
+      const res = await ResetPasswordAPI(
+        resetToken,
+        password
+      );
 
-            const res = await ResetPasswordAPI(resetToken, newPassword);
+      return res.data;
 
-            return res.data;
+    } catch (error) {
 
+      return thunkAPI.rejectWithValue(
+        error.response?.data || {
+          message: "Unable to reset password",
         }
-
-        catch (error) {
-
-            return thunkAPI.rejectWithValue(error.response?.data || { message: "Unable to reset password" });
-
-        }
+      );
 
     }
-
+  }
 );
 
 export const UpdateProfile = createAsyncThunk("auth/updateProfile", async (userData, thunkAPI) => {

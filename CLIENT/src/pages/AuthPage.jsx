@@ -105,7 +105,7 @@ export function AuthPage() {
             {errors.form && <small className="field-error">{errors.form}</small>}
             {mode === "login" && <Link className="product-meta" style={{ textAlign: "right" }} to="/forgot-password">Forgot password?</Link>}
             <button className="btn btn-primary" type="submit" disabled={loading}>{loading ? "Please wait..." : mode === "login" ? "Sign In" : "Create Account"}</button>
-            <button className="btn btn-secondary" type="button" onClick={() => toast("Google login is ready for backend OAuth wiring")}>Continue with Google</button>
+          
           </form>
         </div>
       </section>

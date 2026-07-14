@@ -137,22 +137,51 @@ const authSlice = createSlice({
 
 
             // Forgot Password
+.addCase(ForgotPassword.pending, (state) => {
 
-            .addCase(ForgotPassword.fulfilled, (state, action) => {
+    state.loading = true;
+    state.error = null;
 
-                state.message = action.payload.message;
+})
 
-            })
+.addCase(ForgotPassword.fulfilled, (state, action) => {
+
+    state.loading = false;
+    state.message = action.payload.message;
+
+})
+
+.addCase(ForgotPassword.rejected, (state, action) => {
+
+    state.loading = false;
+    state.error = action.payload?.message;
+
+})
 
 
 
             // Reset Password
 
-            .addCase(ResetPassword.fulfilled, (state, action) => {
+            .addCase(ResetPassword.pending, (state) => {
 
-                state.message = action.payload.message;
+    state.loading = true;
+    state.error = null;
 
-            })
+})
+
+.addCase(ResetPassword.fulfilled, (state, action) => {
+
+    state.loading = false;
+    state.message = action.payload.message;
+
+})
+
+.addCase(ResetPassword.rejected, (state, action) => {
+
+    state.loading = false;
+    state.error = action.payload?.message;
+
+})
 
             //Get Profile
 

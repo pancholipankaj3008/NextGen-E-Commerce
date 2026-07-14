@@ -5,8 +5,8 @@ const {
     SignUp,
     Login,
     Logout,
-    // ForgotPassword,
-    // ResetPassword,
+    ForgotPassword,
+    ResetPassword,
 
     // PROFILE
     GetProfile,
@@ -43,9 +43,8 @@ UserRouter.post("/signup", SignUp);
 UserRouter.post("/login", Login);
 UserRouter.post("/refresh", RefreshAccessToken);
 UserRouter.post("/logout", Auth("user", "admin", "product manager", "order manager", "inventory staff" ), Logout);
-// UserRouter.post("/forgot-password", ForgotPassword);
-// UserRouter.post("/reset-password/:resetToken",ResetPassword);
-
+UserRouter.post("/forgot-password", ForgotPassword);
+UserRouter.post("/reset-password/:resetToken", ResetPassword);
 
 // PROFILE ROUTES
 UserRouter.get("/profile", Auth("user", "admin", "product manager", "order manager", "inventory staff"), GetProfile);

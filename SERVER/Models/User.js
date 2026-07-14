@@ -31,7 +31,9 @@ let userSchema = mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Product"
     }],
-    isBlocked: {type: Boolean, default: false}
+    isBlocked: {type: Boolean, default: false},
+    resetPasswordToken: {type: String},
+    resetPasswordExpire: {type: Date},
 }, {
     timestamps: true
 });
